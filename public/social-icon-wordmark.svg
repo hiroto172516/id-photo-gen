@@ -1,0 +1,28 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="120" fill="#EFF6FF"/>
+  <rect x="32" y="32" width="448" height="448" rx="96" fill="white" stroke="#2563EB" stroke-width="16"/>
+  <rect x="96" y="96" width="320" height="320" rx="72" fill="#DBEAFE"/>
+  <rect x="128" y="128" width="256" height="256" rx="56" fill="white"/>
+  <text
+    x="256"
+    y="238"
+    text-anchor="middle"
+    font-size="86"
+    font-weight="700"
+    fill="#1D4ED8"
+    font-family="'Hiragino Sans','Yu Gothic','Noto Sans JP',sans-serif"
+  >
+    スマ
+  </text>
+  <text
+    x="256"
+    y="320"
+    text-anchor="middle"
+    font-size="86"
+    font-weight="700"
+    fill="#1D4ED8"
+    font-family="'Hiragino Sans','Yu Gothic','Noto Sans JP',sans-serif"
+  >
+    撮り
+  </text>
+</svg>

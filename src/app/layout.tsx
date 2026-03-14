@@ -1,25 +1,41 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { serviceDescription, serviceName, serviceTagline } from "../lib/brand";
 
 export const metadata: Metadata = {
-  title: "スマホで証明写真 | AI証明写真メーカー",
-  description: "スマホで撮って、AIが証明写真に仕上げます。背景変更・スーツ着せ替え対応。パスポート・履歴書・マイナンバーカードの証明写真をスマホだけで作成。",
-  keywords: ["証明写真", "スマホ", "AI", "パスポート写真", "履歴書写真", "証明写真アプリ"],
+  title: `${serviceName} | ${serviceTagline}`,
+  description: serviceDescription,
+  keywords: [
+    "証明写真",
+    "スマホ",
+    "AI",
+    "パスポート写真",
+    "履歴書写真",
+    "証明写真アプリ",
+    "証明写真 スマホ",
+    "就活 証明写真",
+  ],
+  icons: {
+    icon: "/favicon.svg",
+  },
   openGraph: {
-    title: "スマホで証明写真 | AI証明写真メーカー",
-    description: "スマホで撮って、AIが証明写真に仕上げます。背景変更・スーツ着せ替え対応。",
+    title: `${serviceName} | ${serviceTagline}`,
+    description: serviceDescription,
     type: "website",
+    images: [
+      {
+        url: "/ogp.svg",
+        width: 1200,
+        height: 630,
+        alt: serviceName,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${serviceName} | ${serviceTagline}`,
+    description: serviceDescription,
+    images: ["/ogp.svg"],
   },
 };
 
@@ -30,11 +46,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

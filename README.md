@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# スマ撮り証明写真
 
-## Getting Started
+Next.js / Remotionで構築している証明写真Webサービスのプロトタイプです。
 
-First, run the development server:
+## 開発開始
+
+まず依存関係をインストールします。
+
+```bash
+npm install
+```
+
+開発サーバーを起動します。
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+ブラウザで `http://localhost:3000` を開くとLPが表示されます。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 主なページ
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `/` : ランディングページ
+- `/remotion/social-promo` : 15秒のSNS向けショート動画プレビュー
+- `/social-kit` : X / Instagram / TikTok 用の初期設定素材まとめ
 
-## Learn More
+## ブランディング素材
 
-To learn more about Next.js, take a look at the following resources:
+- サービス名: `スマ撮り証明写真`
+- SNSハンドル: `@sumatori_id`
+- SNS文面: [../day1_social_setup.md](../day1_social_setup.md)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## デプロイ先
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- 公開LP: `https://app-six-ochre-65.vercel.app`
 
-## Deploy on Vercel
+## 補足
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Day1のSNSタスクは、外部サービス上でのアカウント作成のみ手動対応が必要です。
+- リポジトリ内の素材は `/social-kit` と `day1_social_setup.md` に集約しています。
