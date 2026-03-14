@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1350">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3B82F6"/>
+      <stop offset="50%" stop-color="#6366F1"/>
+      <stop offset="100%" stop-color="#7C3AED"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.1)" />
+      <stop offset="50%" stop-color="rgba(255,255,255,0.05)" />
+      <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+    </linearGradient>
+  </defs>
+  <!-- 背景 -->
+  <rect width="1080" height="1350" fill="url(#bg)"/>
+  <rect width="1080" height="1350" fill="url(#shine)"/>
+  <!-- 装飾円 -->
+  <circle cx="150" cy="100" r="200" fill="rgba(255,255,255,0.08)"/>
+  <circle cx="950" cy="1250" r="280" fill="rgba(255,255,255,0.06)"/>
+
+  <!-- ロゴ -->
+  <rect x="480" y="200" width="120" height="120" rx="28" fill="white" opacity="0.95"/>
+  <text x="540" y="320" text-anchor="middle" font-family="Hiragino Sans,sans-serif" font-weight="800" font-size="70" fill="#4F46E5">S</text>
+
+  <!-- メインテキスト -->
+  <text x="540" y="550" text-anchor="middle" font-family="Hiragino Sans,sans-serif" font-weight="800" font-size="72" fill="white">
+    <tspan x="540" dy="0">スマ撮り</tspan>
+    <tspan x="540" dy="90">証明写真</tspan>
+  </text>
+
+  <!-- サブテキスト -->
+  <text x="540" y="800" text-anchor="middle" font-family="Hiragino Sans,sans-serif" font-weight="500" font-size="42" fill="rgba(255,255,255,0.85)" letter-spacing="2">
+    <tspan x="540" dy="0">スマホで撮って、</tspan>
+    <tspan x="540" dy="60">AIが証明写真に</tspan>
+    <tspan x="540" dy="60">仕上げます</tspan>
+  </text>
+
+  <!-- 特徴 -->
+  <g font-family="Hiragino Sans,sans-serif" font-weight="600" font-size="32" fill="white" text-anchor="middle">
+    <text x="540" y="1050">✅ 背景自動変更</text>
+    <text x="540" y="1120">⚡ 30秒で完成</text>
+    <text x="540" y="1190">🔓 登録不要</text>
+  </g>
+
+  <!-- CTA -->
+  <rect x="280" y="1230" width="520" height="90" rx="45" fill="white" opacity="0.2" stroke="white" stroke-width="3"/>
+  <text x="540" y="1290" text-anchor="middle" font-family="Hiragino Sans,sans-serif" font-weight="700" font-size="36" fill="white">
+    開発中 🚀
+  </text>
+</svg>
