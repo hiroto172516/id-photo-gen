@@ -3,6 +3,7 @@ import "./globals.css";
 import { serviceDescription, serviceName, serviceTagline } from "../lib/brand";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://app-six-ochre-65.vercel.app"),
   title: `${serviceName} | ${serviceTagline}`,
   description: serviceDescription,
   keywords: [
