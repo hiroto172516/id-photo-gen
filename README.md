@@ -21,6 +21,8 @@ npm run dev
 ## 主なページ
 
 - `/` : ランディングページ
+- `/auth` : メール認証 / Google OAuth の確認画面
+- `/auth/callback` : 認証後のコールバック画面
 - `/remotion/social-promo` : 15秒のSNS向けショート動画プレビュー
 - `/social-kit` : X / Instagram / TikTok 用の初期設定素材まとめ
 
@@ -38,3 +40,4 @@ npm run dev
 
 - Day1のSNSタスクは、外部サービス上でのアカウント作成のみ手動対応が必要です。
 - リポジトリ内の素材は `/social-kit` と `day1_social_setup.md` に集約しています。
+- Day4 の認証設定手順は `../day4_auth_setup.md` に整理します。

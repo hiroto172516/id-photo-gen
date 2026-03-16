@@ -1,35 +1,40 @@
 import Link from "next/link";
+import { WaitlistForm } from "@/components/WaitlistForm";
 import { serviceName } from "../lib/brand";
 
-/* ──────────────────── データ ──────────────────── */
+const benefits = [
+  "正式リリース時に先行案内を受け取れる",
+  "無料公開機能の開始タイミングをすぐ確認できる",
+  "AIスーツ着せ替えの提供開始もまとめて受け取れる",
+];
 
 const features = [
   {
-    title: "スマホで撮影するだけ",
+    title: "スマホで撮るだけ",
     description:
-      "専用アプリ不要。ブラウザからそのまま撮影・アップロードできます。",
+      "専用アプリなし。ブラウザから撮影して、そのまま証明写真用に整えます。",
     icon: "📱",
     accent: "from-sky-400 to-blue-500",
   },
   {
-    title: "AIが自動で仕上げ",
+    title: "AIで規格に合わせる",
     description:
-      "顔の位置を自動検出し、規格に合わせてトリミング。背景も自動で白に変更。",
+      "顔位置の調整、背景の白化、サイズ合わせを自動で進める想定です。",
     icon: "✨",
     accent: "from-violet-400 to-indigo-500",
   },
   {
-    title: "スーツ着せ替え",
+    title: "私服から整える",
     description:
-      "私服で撮影OK。AIがスーツ姿に変換します。就活・転職写真にも対応。",
+      "将来的に AI スーツ着せ替えへ対応し、就活や転職でも使いやすくします。",
     icon: "👔",
     accent: "from-emerald-400 to-teal-500",
   },
   {
-    title: "各種サイズ対応",
+    title: "自宅でやり直せる",
     description:
-      "パスポート・履歴書・マイナンバーカード・ビザなど各規格に対応。",
-    icon: "📐",
+      "写真館に行かずに、納得いくまで撮り直して仕上がりを確認できます。",
+    icon: "🏠",
     accent: "from-amber-400 to-orange-500",
   },
 ];
@@ -37,18 +42,18 @@ const features = [
 const steps = [
   {
     step: "1",
-    title: "写真を撮影",
-    description: "スマホで正面から撮影するだけ",
+    title: "スマホで撮影",
+    description: "明るい場所で正面から撮るだけ。特別な機材は不要です。",
   },
   {
     step: "2",
-    title: "AIが自動加工",
-    description: "背景除去・トリミング・補正",
+    title: "AIで整える",
+    description: "背景、トリミング、サイズ調整をブラウザで完結させます。",
   },
   {
     step: "3",
-    title: "ダウンロード",
-    description: "印刷用の高品質データを取得",
+    title: "印刷用に出力",
+    description: "履歴書やパスポートに使いやすいデータとして保存できます。",
   },
 ];
 
@@ -57,47 +62,85 @@ const sizes = [
   { name: "履歴書", size: "30×40mm", popular: true },
   { name: "マイナンバーカード", size: "35×45mm", popular: false },
   { name: "運転免許証", size: "24×30mm", popular: false },
-  { name: "ビザ（米国）", size: "51×51mm", popular: false },
+  { name: "米国ビザ", size: "51×51mm", popular: false },
 ];
 
 const trustBadges = [
-  { label: "写真館品質", icon: "🏆" },
-  { label: "30秒で完成", icon: "⚡" },
-  { label: "登録不要", icon: "🔓" },
-  { label: "スマホ対応", icon: "📱" },
+  { label: "スマホ完結", icon: "📱" },
+  { label: "自宅で撮り直し", icon: "🔁" },
+  { label: "就活にも対応予定", icon: "💼" },
+  { label: "開発中", icon: "🚧" },
 ];
 
-/* ──────────────── ビフォーアフター ──────────────── */
+const freePlanItems = [
+  "背景色の変更",
+  "自動トリミング",
+  "各種サイズ対応",
+  "コンビニ印刷向けレイアウト",
+];
+
+const premiumPlanItems = [
+  "無料公開機能の全て",
+  "AIスーツ着せ替え",
+  "高解像度ダウンロード",
+  "透かしなしの出力",
+];
+
+const faqItems = [
+  {
+    question: "どんな用途を想定していますか？",
+    answer:
+      "履歴書、就活、転職、パスポート、マイナンバーカードなどの証明写真用途を想定しています。",
+  },
+  {
+    question: "私服で撮っても使えますか？",
+    answer:
+      "はい。無料範囲では背景変更とサイズ調整、有料機能では AI スーツ着せ替えを想定しています。",
+  },
+  {
+    question: "提出先で AI 加工が禁止されている場合は？",
+    answer:
+      "提出先のルールを必ず確認してください。本人確認を妨げる過度な加工は想定していません。",
+  },
+];
+
+function CheckIcon({ accent = "text-zinc-400" }: { accent?: string }) {
+  return (
+    <svg
+      className={`mt-0.5 h-4 w-4 shrink-0 ${accent}`}
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+      strokeWidth={2}
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M5 13l4 4L19 7"
+      />
+    </svg>
+  );
+}
 
 function BeforeAfterMock() {
   return (
     <div className="relative mx-auto mt-16 flex w-full max-w-2xl flex-col items-center gap-6 sm:flex-row sm:gap-0">
-      {/* Before */}
       <div className="group relative z-10 w-52 shrink-0 sm:w-56">
         <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-zinc-300 to-zinc-400 opacity-30 blur-md transition-all group-hover:opacity-50" />
         <div className="relative overflow-hidden rounded-2xl border-2 border-zinc-200 bg-white shadow-lg">
-          {/* 写真モック */}
           <div className="relative aspect-[3/4] bg-gradient-to-b from-amber-50 via-orange-50 to-amber-100">
-            {/* 背景：部屋 */}
             <div className="absolute inset-x-0 top-0 h-1/3 bg-gradient-to-b from-sky-100 to-sky-50" />
             <div className="absolute bottom-0 left-2 h-2/5 w-6 rounded-t-sm bg-amber-200/60" />
             <div className="absolute bottom-0 right-3 h-1/3 w-8 rounded-t-sm bg-amber-200/40" />
-            {/* 人物シルエット */}
             <div className="absolute inset-x-0 bottom-0 flex justify-center">
               <div className="relative">
-                {/* 服（私服Tシャツ） */}
                 <div className="absolute -bottom-4 left-1/2 h-20 w-28 -translate-x-1/2 rounded-t-3xl bg-gradient-to-b from-rose-400 to-rose-500" />
-                {/* 首 */}
                 <div className="absolute -bottom-1 left-1/2 h-5 w-6 -translate-x-1/2 rounded-sm bg-gradient-to-b from-amber-200 to-amber-300" />
-                {/* 頭 */}
                 <div className="relative mx-auto h-24 w-20 rounded-full bg-gradient-to-b from-amber-100 to-amber-200 shadow-inner">
-                  {/* 髪 */}
-                  <div className="absolute -top-1 inset-x-0 h-12 rounded-full bg-gradient-to-b from-zinc-800 to-zinc-700" />
-                  {/* 目 */}
-                  <div className="absolute top-12 left-4 h-2 w-3 rounded-full bg-zinc-800" />
-                  <div className="absolute top-12 right-4 h-2 w-3 rounded-full bg-zinc-800" />
-                  {/* 口 */}
-                  <div className="absolute top-17 left-1/2 h-1.5 w-4 -translate-x-1/2 rounded-full bg-rose-300" />
+                  <div className="absolute inset-x-0 -top-1 h-12 rounded-full bg-gradient-to-b from-zinc-800 to-zinc-700" />
+                  <div className="absolute left-4 top-12 h-2 w-3 rounded-full bg-zinc-800" />
+                  <div className="absolute right-4 top-12 h-2 w-3 rounded-full bg-zinc-800" />
+                  <div className="absolute left-1/2 top-17 h-1.5 w-4 -translate-x-1/2 rounded-full bg-rose-300" />
                 </div>
               </div>
             </div>
@@ -108,11 +151,10 @@ function BeforeAfterMock() {
         </div>
       </div>
 
-      {/* 矢印 */}
       <div className="z-20 flex shrink-0 items-center justify-center sm:mx-6">
         <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/30 sm:h-16 sm:w-16">
           <svg
-            className="h-6 w-6 text-white sm:h-7 sm:w-7 rotate-90 sm:rotate-0"
+            className="h-6 w-6 rotate-90 text-white sm:h-7 sm:w-7 sm:rotate-0"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -127,44 +169,31 @@ function BeforeAfterMock() {
         </div>
       </div>
 
-      {/* After */}
       <div className="group relative z-10 w-52 shrink-0 sm:w-56">
         <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-blue-400 to-indigo-500 opacity-30 blur-md transition-all group-hover:opacity-50" />
         <div className="relative overflow-hidden rounded-2xl border-2 border-blue-200 bg-white shadow-lg ring-1 ring-blue-500/10">
-          {/* 証明写真モック */}
           <div className="relative aspect-[3/4] bg-gradient-to-b from-sky-50 to-white">
-            {/* クリーンな背景 */}
             <div className="absolute inset-0 bg-gradient-to-b from-blue-50/50 to-white" />
-            {/* 人物シルエット */}
             <div className="absolute inset-x-0 bottom-0 flex justify-center">
               <div className="relative">
-                {/* スーツ */}
                 <div className="absolute -bottom-4 left-1/2 h-20 w-28 -translate-x-1/2 rounded-t-3xl bg-gradient-to-b from-zinc-700 to-zinc-800">
-                  {/* ラペル */}
-                  <div className="absolute top-2 left-3 h-10 w-4 -rotate-12 bg-zinc-600/50" />
-                  <div className="absolute top-2 right-3 h-10 w-4 rotate-12 bg-zinc-600/50" />
-                  {/* シャツ */}
-                  <div className="absolute top-0 left-1/2 h-8 w-6 -translate-x-1/2 bg-white" />
+                  <div className="absolute left-3 top-2 h-10 w-4 -rotate-12 bg-zinc-600/50" />
+                  <div className="absolute right-3 top-2 h-10 w-4 rotate-12 bg-zinc-600/50" />
+                  <div className="absolute left-1/2 top-0 h-8 w-6 -translate-x-1/2 bg-white" />
                 </div>
-                {/* 首 */}
                 <div className="absolute -bottom-1 left-1/2 h-5 w-6 -translate-x-1/2 rounded-sm bg-gradient-to-b from-amber-200 to-amber-300" />
-                {/* 頭 */}
                 <div className="relative mx-auto h-24 w-20 rounded-full bg-gradient-to-b from-amber-100 to-amber-200 shadow-inner">
-                  {/* 髪 */}
-                  <div className="absolute -top-1 inset-x-0 h-12 rounded-full bg-gradient-to-b from-zinc-800 to-zinc-700" />
-                  {/* 目 */}
-                  <div className="absolute top-12 left-4 h-2 w-3 rounded-full bg-zinc-800" />
-                  <div className="absolute top-12 right-4 h-2 w-3 rounded-full bg-zinc-800" />
-                  {/* 口 */}
-                  <div className="absolute top-17 left-1/2 h-1.5 w-4 -translate-x-1/2 rounded-full bg-rose-300" />
+                  <div className="absolute inset-x-0 -top-1 h-12 rounded-full bg-gradient-to-b from-zinc-800 to-zinc-700" />
+                  <div className="absolute left-4 top-12 h-2 w-3 rounded-full bg-zinc-800" />
+                  <div className="absolute right-4 top-12 h-2 w-3 rounded-full bg-zinc-800" />
+                  <div className="absolute left-1/2 top-17 h-1.5 w-4 -translate-x-1/2 rounded-full bg-rose-300" />
                 </div>
               </div>
             </div>
-            {/* 規格ガイド線 */}
             <div className="absolute inset-4 rounded border border-dashed border-blue-300/40" />
           </div>
           <div className="bg-blue-50 px-3 py-2 text-center text-xs font-semibold text-blue-600">
-            AI加工後 ✓
+            AIで証明写真化
           </div>
         </div>
       </div>
@@ -172,12 +201,9 @@ function BeforeAfterMock() {
   );
 }
 
-/* ──────────────── メインページ ──────────────── */
-
 export default function Home() {
   return (
     <div className="min-h-screen bg-white text-zinc-900 antialiased">
-      {/* ヘッダー */}
       <header className="sticky top-0 z-50 border-b border-zinc-100/80 bg-white/70 backdrop-blur-xl backdrop-saturate-150">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2">
@@ -189,6 +215,12 @@ export default function Home() {
             </span>
           </Link>
           <nav className="flex items-center gap-1 text-sm sm:gap-2">
+            <Link
+              href="/auth"
+              className="hidden rounded-lg px-3 py-2 text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900 sm:inline-block"
+            >
+              ログイン
+            </Link>
             <a
               href="#features"
               className="hidden rounded-lg px-3 py-2 text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900 sm:inline-block"
@@ -199,57 +231,71 @@ export default function Home() {
               href="#pricing"
               className="hidden rounded-lg px-3 py-2 text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900 sm:inline-block"
             >
-              料金
+              公開予定
             </a>
             <Link
-              href="/app"
+              href="/shoot"
+              className="hidden rounded-lg px-3 py-2 text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900 sm:inline-block"
+            >
+              試してみる（β）
+            </Link>
+            <a
+              href="#waitlist"
               className="ml-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-all hover:shadow-lg hover:shadow-blue-500/30 active:scale-[0.98]"
             >
-              無料で試す
-            </Link>
+              事前登録する
+            </a>
           </nav>
         </div>
       </header>
 
-      {/* ヒーロー */}
       <section className="relative overflow-hidden">
-        {/* 背景装飾 */}
         <div className="pointer-events-none absolute inset-0">
           <div className="absolute -top-24 right-0 h-96 w-96 rounded-full bg-blue-100/60 blur-3xl" />
           <div className="absolute -bottom-32 -left-16 h-80 w-80 rounded-full bg-indigo-100/40 blur-3xl" />
-          <div className="absolute top-1/2 left-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-50/80 blur-3xl" />
+          <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sky-50/80 blur-3xl" />
         </div>
 
         <div className="relative mx-auto max-w-6xl px-4 pb-20 pt-16 sm:px-6 sm:pt-24">
-          {/* バッジ */}
           <div className="mb-8 flex justify-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-200/60 bg-blue-50/80 px-4 py-1.5 text-sm font-medium text-blue-700 backdrop-blur-sm">
               <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
-              登録不要・無料で使えます
+              開発中のサービスです。正式公開を先行案内します
             </div>
           </div>
 
-          <h1 className="mx-auto max-w-3xl text-center text-4xl font-extrabold leading-[1.15] tracking-tight sm:text-5xl md:text-6xl">
+          <h1 className="mx-auto max-w-4xl text-center text-4xl font-extrabold leading-[1.15] tracking-tight sm:text-5xl md:text-6xl">
             スマホで撮って、
             <br />
             <span className="bg-gradient-to-r from-blue-600 via-indigo-500 to-violet-500 bg-clip-text text-transparent">
-              AIが証明写真に仕上げます
+              AIが証明写真に仕上げる
             </span>
+            <br />
+            Webサービスを開発中です
           </h1>
 
-          <p className="mx-auto mt-6 max-w-xl text-center text-base leading-relaxed text-zinc-500 sm:text-lg">
-            写真館に行かなくても、コンビニで印刷しなくても。
+          <p className="mx-auto mt-6 max-w-2xl text-center text-base leading-relaxed text-zinc-500 sm:text-lg">
+            写真館に行かず、私服の1枚から証明写真を整える体験を作っています。
             <br className="hidden sm:inline" />
-            スマホひとつで証明写真が完成します。
+            先に登録しておくと、無料公開と AI スーツ着せ替えの開始をまとめて受け取れます。
           </p>
 
-          {/* CTA */}
+          <p className="mx-auto mt-4 max-w-xl text-center text-sm leading-7 text-zinc-400">
+            先行ユーザー向けの認証導線は
+            {" "}
+            <Link href="/auth" className="font-semibold text-blue-600 underline-offset-4 hover:underline">
+              `/auth`
+            </Link>
+            {" "}
+            で確認できます。
+          </p>
+
           <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
-            <Link
-              href="/app"
+            <a
+              href="#waitlist"
               className="group relative inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-blue-500/30 transition-all hover:shadow-xl hover:shadow-blue-500/40 active:scale-[0.98]"
             >
-              無料で証明写真を作る
+              事前登録して公開を待つ
               <svg
                 className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
                 fill="none"
@@ -263,7 +309,7 @@ export default function Home() {
                   d="M13 7l5 5m0 0l-5 5m5-5H6"
                 />
               </svg>
-            </Link>
+            </a>
             <a
               href="#how-it-works"
               className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-7 py-3.5 text-base font-medium text-zinc-700 transition-all hover:border-zinc-300 hover:bg-zinc-50 active:scale-[0.98]"
@@ -272,7 +318,6 @@ export default function Home() {
             </a>
           </div>
 
-          {/* 信頼バッジ */}
           <div className="mt-12 flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
             {trustBadges.map((badge) => (
               <div
@@ -285,12 +330,10 @@ export default function Home() {
             ))}
           </div>
 
-          {/* ビフォーアフター */}
           <BeforeAfterMock />
         </div>
       </section>
 
-      {/* 使い方 */}
       <section
         id="how-it-works"
         className="relative border-t border-zinc-100 bg-zinc-50/70"
@@ -301,12 +344,11 @@ export default function Home() {
               How it works
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-              かんたん3ステップ
+              公開時に目指している体験
             </h2>
           </div>
 
           <div className="relative mt-16 grid gap-8 sm:grid-cols-3 sm:gap-6">
-            {/* コネクター線 */}
             <div className="pointer-events-none absolute top-10 hidden h-px w-full sm:block">
               <div className="mx-auto h-px w-2/3 bg-gradient-to-r from-transparent via-zinc-300 to-transparent" />
             </div>
@@ -329,7 +371,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 機能 */}
       <section id="features" className="relative">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
           <div className="text-center">
@@ -337,27 +378,26 @@ export default function Home() {
               Features
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-              主な機能
+              価値として届けたいこと
             </h2>
           </div>
 
           <div className="mt-16 grid gap-5 sm:grid-cols-2">
-            {features.map((f) => (
+            {features.map((feature) => (
               <div
-                key={f.title}
+                key={feature.title}
                 className="group relative overflow-hidden rounded-2xl border border-zinc-200/80 bg-white p-7 transition-all hover:border-zinc-300 hover:shadow-lg hover:shadow-zinc-200/50"
               >
-                {/* アクセントグラデーション */}
                 <div
-                  className={`absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${f.accent} opacity-[0.07] transition-all group-hover:opacity-[0.12] group-hover:scale-150`}
+                  className={`absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${feature.accent} opacity-[0.07] transition-all group-hover:scale-150 group-hover:opacity-[0.12]`}
                 />
                 <div className="relative">
                   <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-zinc-50 text-2xl">
-                    {f.icon}
+                    {feature.icon}
                   </div>
-                  <h3 className="mt-4 text-lg font-bold">{f.title}</h3>
+                  <h3 className="mt-4 text-lg font-bold">{feature.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-zinc-500">
-                    {f.description}
+                    {feature.description}
                   </p>
                 </div>
               </div>
@@ -366,7 +406,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 対応サイズ */}
       <section className="border-t border-zinc-100 bg-zinc-50/70">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
           <div className="text-center">
@@ -374,26 +413,26 @@ export default function Home() {
               Sizes
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-              対応サイズ
+              想定している対応サイズ
             </h2>
           </div>
 
           <div className="mx-auto mt-12 grid max-w-lg gap-3">
-            {sizes.map((s) => (
+            {sizes.map((size) => (
               <div
-                key={s.name}
+                key={size.name}
                 className="flex items-center justify-between rounded-xl border border-zinc-200/80 bg-white px-5 py-3.5 transition-all hover:border-zinc-300 hover:shadow-sm"
               >
                 <div className="flex items-center gap-3">
-                  <span className="font-semibold text-zinc-800">{s.name}</span>
-                  {s.popular && (
+                  <span className="font-semibold text-zinc-800">{size.name}</span>
+                  {size.popular ? (
                     <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-blue-600">
                       人気
                     </span>
-                  )}
+                  ) : null}
                 </div>
                 <span className="font-mono text-sm text-zinc-400">
-                  {s.size}
+                  {size.size}
                 </span>
               </div>
             ))}
@@ -401,219 +440,158 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 料金 */}
       <section id="pricing" className="relative">
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
           <div className="text-center">
             <p className="text-sm font-semibold uppercase tracking-widest text-blue-600">
-              Pricing
+              Roadmap
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-              料金プラン
+              公開予定の機能
             </h2>
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-zinc-500">
+              まずは無料で使える証明写真の基本機能を公開し、その後に AI
+              スーツ着せ替えを有料機能として追加する予定です。
+            </p>
           </div>
 
           <div className="mx-auto mt-16 grid max-w-3xl gap-6 sm:grid-cols-2">
-            {/* 無料プラン */}
             <div className="rounded-2xl border border-zinc-200 bg-white p-8">
-              <h3 className="text-lg font-bold text-zinc-800">無料プラン</h3>
+              <h3 className="text-lg font-bold text-zinc-800">無料公開予定</h3>
               <p className="mt-4">
                 <span className="text-4xl font-extrabold tracking-tight">
                   ¥0
                 </span>
               </p>
-              <p className="mt-1 text-sm text-zinc-400">ずっと無料</p>
+              <p className="mt-1 text-sm text-zinc-400">公開後すぐに使える予定</p>
               <ul className="mt-8 space-y-3 text-sm text-zinc-600">
-                <li className="flex items-start gap-2">
-                  <svg
-                    className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  背景色の変更
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg
-                    className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  自動トリミング
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg
-                    className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  各種サイズに対応
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg
-                    className="mt-0.5 h-4 w-4 shrink-0 text-zinc-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  透かし付きプレビュー
-                </li>
+                {freePlanItems.map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <CheckIcon />
+                    {item}
+                  </li>
+                ))}
               </ul>
-              <Link
-                href="/app"
+              <a
+                href="#waitlist"
                 className="mt-8 block rounded-xl border border-zinc-200 bg-zinc-50 py-3 text-center text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-100"
               >
-                無料で始める
-              </Link>
+                公開通知を受け取る
+              </a>
             </div>
 
-            {/* プレミアムプラン */}
             <div className="relative rounded-2xl border-2 border-blue-500/80 bg-white p-8 shadow-xl shadow-blue-500/10">
-              {/* おすすめバッジ */}
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
                 <span className="rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-4 py-1 text-xs font-bold text-white shadow-md shadow-blue-500/30">
-                  おすすめ
+                  開発中
                 </span>
               </div>
 
-              <h3 className="text-lg font-bold text-blue-600">プレミアム</h3>
+              <h3 className="text-lg font-bold text-blue-600">将来の有料機能</h3>
               <p className="mt-4">
                 <span className="text-4xl font-extrabold tracking-tight">
                   ¥300
                 </span>
                 <span className="ml-1 text-sm font-normal text-zinc-400">
-                  / 枚
+                  / 枚 想定
                 </span>
               </p>
               <p className="mt-1 text-sm text-zinc-400">
-                必要なときだけ
+                AIスーツ着せ替えを追加予定
               </p>
               <ul className="mt-8 space-y-3 text-sm text-zinc-600">
-                <li className="flex items-start gap-2">
-                  <svg
-                    className="mt-0.5 h-4 w-4 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  無料プランの全機能
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg
-                    className="mt-0.5 h-4 w-4 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  <span className="font-semibold text-zinc-800">
-                    AIスーツ着せ替え
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg
-                    className="mt-0.5 h-4 w-4 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  <span className="font-semibold text-zinc-800">
-                    高解像度ダウンロード
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <svg
-                    className="mt-0.5 h-4 w-4 shrink-0 text-blue-500"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  <span className="font-semibold text-zinc-800">
-                    透かしなし
-                  </span>
-                </li>
+                {premiumPlanItems.map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <CheckIcon accent="text-blue-500" />
+                    <span className="font-semibold text-zinc-800">{item}</span>
+                  </li>
+                ))}
               </ul>
-              <div className="mt-8 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 py-3 text-center text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-all hover:shadow-lg hover:shadow-blue-500/35">
-                近日公開
-              </div>
+              <a
+                href="#waitlist"
+                className="mt-8 block rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 py-3 text-center text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-all hover:shadow-lg hover:shadow-blue-500/35"
+              >
+                AI機能の案内を受け取る
+              </a>
             </div>
           </div>
         </div>
       </section>
 
-      {/* CTA */}
+      <section id="waitlist" className="border-t border-zinc-100 bg-zinc-950">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 py-20 sm:px-6 sm:py-24 lg:grid-cols-[0.95fr_1.05fr] lg:items-start">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-300">
+              Waitlist
+            </p>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              正式公開をメールで受け取る
+            </h2>
+            <p className="mt-4 max-w-xl text-base leading-8 text-zinc-300">
+              まだ開発中ですが、公開タイミングと機能追加の案内は先に受け取れます。
+              無料公開の開始と、AI スーツ着せ替えの提供開始をまとめてお知らせします。
+            </p>
+            <ul className="mt-8 space-y-3 text-sm leading-7 text-zinc-200">
+              {benefits.map((item) => (
+                <li key={item} className="flex items-start gap-3">
+                  <CheckIcon accent="text-blue-300" />
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="rounded-3xl border border-white/10 bg-white p-6 shadow-2xl shadow-black/20 sm:p-8">
+            <WaitlistForm />
+          </div>
+        </div>
+      </section>
+
+      <section className="border-t border-zinc-100 bg-zinc-50/60">
+        <div className="mx-auto max-w-4xl px-4 py-20 sm:px-6 sm:py-24">
+          <div className="text-center">
+            <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-600">
+              FAQ
+            </p>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
+              よくある前提
+            </h2>
+          </div>
+
+          <div className="mt-12 space-y-4">
+            {faqItems.map((item) => (
+              <article
+                key={item.question}
+                className="rounded-2xl border border-zinc-200 bg-white p-6"
+              >
+                <h3 className="text-base font-bold text-zinc-900">
+                  {item.question}
+                </h3>
+                <p className="mt-2 text-sm leading-7 text-zinc-500">
+                  {item.answer}
+                </p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-600 to-violet-700" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(255,255,255,0.15),transparent_60%)]" />
         <div className="relative mx-auto max-w-6xl px-4 py-20 text-center sm:px-6 sm:py-28">
           <h2 className="text-3xl font-bold text-white sm:text-4xl">
-            今すぐ証明写真を作りましょう
+            写真館に行かずに、スマホで整える体験を作っています
           </h2>
-          <p className="mt-4 text-base text-blue-200">
-            登録不要・無料で始められます
+          <p className="mx-auto mt-4 max-w-2xl text-base leading-8 text-blue-100">
+            公開前の今は、待機リストから案内を受け取る形です。
+            リリース時にすぐ試したい場合は、先に登録しておいてください。
           </p>
-          <Link
-            href="/app"
+          <a
+            href="#waitlist"
             className="mt-8 inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-base font-semibold text-blue-600 shadow-lg transition-all hover:bg-blue-50 hover:shadow-xl active:scale-[0.98]"
           >
-            無料で証明写真を作る
+            事前登録する
             <svg
               className="h-4 w-4"
               fill="none"
@@ -627,11 +605,10 @@ export default function Home() {
                 d="M13 7l5 5m0 0l-5 5m5-5H6"
               />
             </svg>
-          </Link>
+          </a>
         </div>
       </section>
 
-      {/* フッター */}
       <footer className="border-t border-zinc-100 bg-zinc-50/50">
         <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
           <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">

@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "remotion:studio": "remotion studio src/remotion/index.ts",
@@ -13,10 +13,13 @@
   "dependencies": {
     "@remotion/cli": "^4.0.435",
     "@remotion/google-fonts": "^4.0.435",
+    "@serwist/next": "^9.5.7",
+    "@supabase/supabase-js": "^2.99.1",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "^4.0.435",
+    "serwist": "^9.5.7",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -26,6 +29,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "sharp": "^0.34.5",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

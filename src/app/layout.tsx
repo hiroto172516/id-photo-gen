@@ -1,6 +1,12 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { serviceDescription, serviceName, serviceTagline } from "../lib/brand";
+import { AuthProvider } from "@/components/AuthProvider";
+import PWAInstallBanner from "@/components/PWAInstallBanner";
+
+export const viewport: Viewport = {
+  themeColor: "#3B82F6",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://app-six-ochre-65.vercel.app"),
@@ -15,9 +21,19 @@ export const metadata: Metadata = {
     "証明写真アプリ",
     "証明写真 スマホ",
     "就活 証明写真",
+    "証明写真 自宅",
+    "証明写真 無料",
+    "AI証明写真",
+    "就活 証明写真 スマホ",
+    "パスポート 証明写真 スマホ",
+    "マイナンバー 証明写真",
+    "証明写真 作り方",
+    "証明写真 コンビニ",
   ],
+  manifest: "/manifest.json",
   icons: {
     icon: "/favicon.svg",
+    apple: "/icons/apple-touch-icon.png",
   },
   openGraph: {
     title: `${serviceName} | ${serviceTagline}`,
@@ -47,7 +63,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>{children}</AuthProvider>
+        <PWAInstallBanner />
+      </body>
     </html>
   );
 }

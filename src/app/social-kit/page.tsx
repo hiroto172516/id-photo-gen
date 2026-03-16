@@ -5,6 +5,7 @@ import {
   serviceTagline,
   socialHandles,
   socialProfiles,
+  socialShareCopies,
 } from "../../lib/brand";
 
 const platforms = [
@@ -119,6 +120,23 @@ export default function SocialKitPage() {
             </p>
           </section>
         </div>
+
+        <section className="mt-10 rounded-3xl border border-blue-100 bg-blue-50/80 p-7 shadow-[0_20px_60px_rgba(59,130,246,0.08)]">
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-500">
+            Day8 Share Copy
+          </p>
+          <h2 className="mt-3 text-2xl font-bold text-slate-900">β版アップロード機能の共有文面</h2>
+          <div className="mt-6 grid gap-5 lg:grid-cols-2">
+            <article className="rounded-2xl bg-white p-5">
+              <p className="text-sm font-semibold text-slate-500">X 投稿案</p>
+              <p className="mt-3 text-sm leading-8 text-slate-700">{socialShareCopies.x}</p>
+            </article>
+            <article className="rounded-2xl bg-white p-5">
+              <p className="text-sm font-semibold text-slate-500">Instagram 投稿案</p>
+              <p className="mt-3 text-sm leading-8 text-slate-700">{socialShareCopies.instagram}</p>
+            </article>
+          </div>
+        </section>
       </section>
     </main>
   );
