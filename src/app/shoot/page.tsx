@@ -11,6 +11,7 @@ import {
   processUploadedImage,
   type ProcessedImage,
 } from '@/lib/imageProcessing';
+import { getUploadTtlHours } from '@/lib/uploadPolicy';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 
 type Tab = 'camera' | 'file';
@@ -19,6 +20,7 @@ type UploadState = 'idle' | 'uploading' | 'success';
 type UploadedAsset = {
   bucket: string;
   objectPath: string;
+  expiresAt: string;
 };
 
 export default function ShootPage() {
@@ -58,6 +60,7 @@ export default function ShootPage() {
             objectPath: string;
             path: string;
             token: string;
+            expiresAt: string;
           }
         | {
             ok: false;
@@ -91,6 +94,7 @@ export default function ShootPage() {
       setUploadedAsset({
         bucket: signResult.bucket,
         objectPath: signResult.objectPath,
+        expiresAt: signResult.expiresAt,
       });
       setUploadState('success');
     } catch (error) {
@@ -148,6 +152,8 @@ export default function ShootPage() {
     setUploadState('idle');
     setUploadedAsset(null);
   }, []);
+
+  const uploadTtlHours = getUploadTtlHours();
 
   return (
     <div className="min-h-screen bg-white text-zinc-900">
@@ -218,6 +224,9 @@ export default function ShootPage() {
                   保存先: {uploadedAsset.bucket}/{uploadedAsset.objectPath}
                 </p>
                 <p className="mt-2 text-xs text-emerald-700">
+                  自動削除予定: {new Date(uploadedAsset.expiresAt).toLocaleString('ja-JP')}
+                </p>
+                <p className="mt-2 text-xs text-emerald-700">
                   AI処理本体は Day11 以降で接続予定です。現時点では保存完了まで確認できます。
                 </p>
               </div>
@@ -275,6 +284,11 @@ export default function ShootPage() {
                 画像を処理しています。数秒お待ちください。
               </div>
             )}
+
+            <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-xs leading-6 text-zinc-600">
+              アップロードは JPEG・10MB 以下に正規化して送信します。保存画像は {uploadTtlHours} 時間後に自動削除され、
+              署名URLの発行は短時間あたり回数制限があります。
+            </div>
 
             {/* 撮影ヒント */}
             <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4">

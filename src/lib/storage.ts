@@ -1,8 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
-
-const DEFAULT_STORAGE_BUCKET = 'uploads';
-const MAX_UPLOAD_FILE_SIZE = 10 * 1024 * 1024;
-const ALLOWED_MIME_TYPES = ['image/jpeg'] as const;
+import {
+  buildTemporaryUploadObjectPath,
+  getAllowedUploadMimeTypes,
+  getMaxUploadFileSize,
+  getObjectExpiryDateFromPath,
+  getStorageBucketDefaultName,
+  getTemporaryUploadPrefix,
+} from '@/lib/uploadPolicy';
 
 type StorageEnv = {
   url: string;
@@ -15,7 +19,7 @@ let ensureBucketPromise: Promise<void> | null = null;
 function getStorageEnv(): StorageEnv | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const bucket = process.env.SUPABASE_STORAGE_BUCKET?.trim() || DEFAULT_STORAGE_BUCKET;
+  const bucket = process.env.SUPABASE_STORAGE_BUCKET?.trim() || getStorageBucketDefaultName();
 
   if (!url || !serviceRoleKey) {
     return null;
@@ -35,14 +39,6 @@ function createStorageAdminClient(env: StorageEnv) {
       persistSession: false,
     },
   });
-}
-
-function createObjectPath() {
-  const now = new Date();
-  const year = now.getUTCFullYear();
-  const month = String(now.getUTCMonth() + 1).padStart(2, '0');
-
-  return `${year}/${month}/${crypto.randomUUID()}.jpg`;
 }
 
 async function ensureBucketExists(env: StorageEnv) {
@@ -66,8 +62,8 @@ async function ensureBucketExists(env: StorageEnv) {
 
     const { error: createError } = await client.storage.createBucket(env.bucket, {
       public: false,
-      allowedMimeTypes: [...ALLOWED_MIME_TYPES],
-      fileSizeLimit: MAX_UPLOAD_FILE_SIZE,
+      allowedMimeTypes: getAllowedUploadMimeTypes(),
+      fileSizeLimit: getMaxUploadFileSize(),
     });
 
     if (createError) {
@@ -86,18 +82,10 @@ export function isStorageConfigured() {
 }
 
 export function getStorageBucketName() {
-  return getStorageEnv()?.bucket ?? DEFAULT_STORAGE_BUCKET;
+  return getStorageEnv()?.bucket ?? getStorageBucketDefaultName();
 }
 
-export function getAllowedUploadMimeTypes() {
-  return [...ALLOWED_MIME_TYPES];
-}
-
-export function getMaxUploadFileSize() {
-  return MAX_UPLOAD_FILE_SIZE;
-}
-
-export async function createSignedUploadTarget() {
+export async function createSignedUploadTarget(expiresAt: Date) {
   const env = getStorageEnv();
 
   if (!env) {
@@ -110,7 +98,7 @@ export async function createSignedUploadTarget() {
 
   await ensureBucketExists(env);
 
-  const objectPath = createObjectPath();
+  const objectPath = buildTemporaryUploadObjectPath(expiresAt);
   const client = createStorageAdminClient(env);
   const { data, error } = await client.storage
     .from(env.bucket)
@@ -132,5 +120,89 @@ export async function createSignedUploadTarget() {
     objectPath,
     token: data.token,
     path: data.path,
+  };
+}
+
+export async function deleteExpiredUploadObjects(before = new Date()) {
+  const env = getStorageEnv();
+
+  if (!env) {
+    return {
+      ok: false as const,
+      status: 'unconfigured' as const,
+      message: 'ストレージ設定が未完了のため、期限切れ画像を削除できません。',
+    };
+  }
+
+  await ensureBucketExists(env);
+
+  const client = createStorageAdminClient(env);
+  const prefix = getTemporaryUploadPrefix();
+  const expiredObjectPaths: string[] = [];
+  let offset = 0;
+  const limit = 100;
+
+  while (true) {
+    const { data, error } = await client.storage.from(env.bucket).list(prefix, {
+      limit,
+      offset,
+      sortBy: {
+        column: 'name',
+        order: 'asc',
+      },
+    });
+
+    if (error) {
+      return {
+        ok: false as const,
+        status: 'failed' as const,
+        message: '期限切れ画像一覧の取得に失敗しました。',
+      };
+    }
+
+    if (!data || data.length === 0) {
+      break;
+    }
+
+    for (const item of data) {
+      if (!item.name || item.id === null) {
+        continue;
+      }
+
+      const objectPath = `${prefix}/${item.name}`;
+      const expiresAt = getObjectExpiryDateFromPath(objectPath);
+
+      if (expiresAt && expiresAt <= before) {
+        expiredObjectPaths.push(objectPath);
+      }
+    }
+
+    if (data.length < limit) {
+      break;
+    }
+
+    offset += data.length;
+  }
+
+  if (expiredObjectPaths.length === 0) {
+    return {
+      ok: true as const,
+      deletedCount: 0,
+    };
+  }
+
+  const { error } = await client.storage.from(env.bucket).remove(expiredObjectPaths);
+
+  if (error) {
+    return {
+      ok: false as const,
+      status: 'failed' as const,
+      message: '期限切れ画像の削除に失敗しました。',
+    };
+  }
+
+  return {
+    ok: true as const,
+    deletedCount: expiredObjectPaths.length,
   };
 }

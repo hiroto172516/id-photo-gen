@@ -1,49 +1,55 @@
 import { NextResponse } from 'next/server';
 import {
   createSignedUploadTarget,
-  getAllowedUploadMimeTypes,
-  getMaxUploadFileSize,
   isStorageConfigured,
 } from '@/lib/storage';
+import { consumeFixedWindowRateLimit, pruneExpiredRateLimitEntries } from '@/lib/rateLimit';
+import {
+  getUploadExpiryDate,
+  getUploadRateLimitMaxRequests,
+  getUploadRateLimitWindowMs,
+  validateSignedUploadRequest,
+} from '@/lib/uploadPolicy';
 
-type UploadSignInput = {
-  mimeType?: unknown;
-  fileSize?: unknown;
-};
+function getClientIp(request: Request) {
+  const forwardedFor = request.headers.get('x-forwarded-for');
 
-function parseUploadSignInput(input: UploadSignInput) {
-  const mimeType = typeof input.mimeType === 'string' ? input.mimeType.trim() : '';
-  const fileSize = typeof input.fileSize === 'number' ? input.fileSize : Number(input.fileSize);
-
-  if (!mimeType) {
-    return {
-      ok: false as const,
-      message: 'ファイル形式を指定してください。',
-    };
+  if (forwardedFor) {
+    const [firstIp] = forwardedFor.split(',');
+    if (firstIp?.trim()) {
+      return firstIp.trim();
+    }
   }
 
-  if (!getAllowedUploadMimeTypes().includes(mimeType as 'image/jpeg')) {
-    return {
-      ok: false as const,
-      message: 'JPEG 形式の画像のみアップロードできます。',
-    };
-  }
-
-  if (!Number.isFinite(fileSize) || fileSize <= 0 || fileSize > getMaxUploadFileSize()) {
-    return {
-      ok: false as const,
-      message: 'アップロードする画像サイズが不正です。',
-    };
-  }
-
-  return {
-    ok: true as const,
-  };
+  return request.headers.get('cf-connecting-ip') ?? request.headers.get('x-real-ip') ?? 'anonymous';
 }
 
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => null)) as UploadSignInput | null;
-  const parsed = parseUploadSignInput(body ?? {});
+  pruneExpiredRateLimitEntries();
+
+  const rateLimit = consumeFixedWindowRateLimit({
+    key: `upload-sign:${getClientIp(request)}`,
+    limit: getUploadRateLimitMaxRequests(),
+    windowMs: getUploadRateLimitWindowMs(),
+  });
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: '短時間にリクエストが集中しています。しばらく待ってから再度お試しください。',
+      },
+      {
+        status: 429,
+        headers: {
+          'Retry-After': String(Math.max(1, Math.ceil((rateLimit.resetAt - Date.now()) / 1000))),
+        },
+      }
+    );
+  }
+
+  const body = (await request.json().catch(() => null)) as unknown;
+  const parsed = validateSignedUploadRequest(body);
 
   if (!parsed.ok) {
     return NextResponse.json(
@@ -55,7 +61,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const result = await createSignedUploadTarget().catch(() => ({
+  const expiresAt = getUploadExpiryDate();
+  const result = await createSignedUploadTarget(expiresAt).catch(() => ({
     ok: false as const,
     status: 'failed' as const,
     message: 'アップロードURLの発行に失敗しました。',
@@ -69,6 +76,7 @@ export async function POST(request: Request) {
         objectPath: result.objectPath,
         path: result.path,
         token: result.token,
+        expiresAt: expiresAt.toISOString(),
       },
       { status: 200 }
     );

@@ -1,5 +1,7 @@
 'use client';
 
+import { getAllowedUploadMimeTypes, getMaxUploadFileSize } from '@/lib/uploadPolicy';
+
 export interface ProcessedImage {
   previewUrl: string;
   blob: Blob;
@@ -11,6 +13,16 @@ export interface ProcessedImage {
 const MAX_IMAGE_EDGE = 1600;
 const OUTPUT_MIME_TYPE = 'image/jpeg';
 const OUTPUT_QUALITY = 0.9;
+
+function validateProcessedBlob(blob: Blob) {
+  if (!getAllowedUploadMimeTypes().includes(blob.type as 'image/jpeg')) {
+    throw new Error('JPEG 形式の画像のみアップロードできます。');
+  }
+
+  if (blob.size <= 0 || blob.size > getMaxUploadFileSize()) {
+    throw new Error('ファイルサイズは10MB以下にしてください。');
+  }
+}
 
 function readUint16(view: DataView, offset: number, littleEndian = false) {
   return view.getUint16(offset, littleEndian);
@@ -248,6 +260,7 @@ export async function processUploadedImage(file: File): Promise<ProcessedImage> 
     drawOrientedImage(ctx, image, effectiveOrientation, drawWidth, drawHeight);
 
     const blob = await canvasToBlob(canvas, OUTPUT_MIME_TYPE, OUTPUT_QUALITY);
+    validateProcessedBlob(blob);
     const previewUrl = await blobToDataUrl(blob);
 
     return {
@@ -263,15 +276,31 @@ export async function processUploadedImage(file: File): Promise<ProcessedImage> 
 }
 
 export async function createProcessedImageFromDataUrl(dataUrl: string): Promise<ProcessedImage> {
-  const response = await fetch(dataUrl);
-  const blob = await response.blob();
   const image = await loadImage(dataUrl);
+  const targetSize = getTargetSize(image.width, image.height);
+  const canvas = document.createElement('canvas');
+
+  canvas.width = targetSize.width;
+  canvas.height = targetSize.height;
+
+  const ctx = canvas.getContext('2d');
+  if (!ctx) {
+    throw new Error('Canvas API を利用できませんでした');
+  }
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(image, 0, 0, targetSize.width, targetSize.height);
+
+  const blob = await canvasToBlob(canvas, OUTPUT_MIME_TYPE, OUTPUT_QUALITY);
+  validateProcessedBlob(blob);
+  const previewUrl = await blobToDataUrl(blob);
 
   return {
-    previewUrl: dataUrl,
+    previewUrl,
     blob,
-    width: image.width,
-    height: image.height,
-    mimeType: blob.type || OUTPUT_MIME_TYPE,
+    width: targetSize.width,
+    height: targetSize.height,
+    mimeType: OUTPUT_MIME_TYPE,
   };
 }
