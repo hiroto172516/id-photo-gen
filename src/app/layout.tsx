@@ -2,7 +2,9 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { publicAppUrl, serviceDescription, serviceName, serviceTagline } from "../lib/brand";
 import { AuthProvider } from "@/components/AuthProvider";
+import { GoogleAnalytics } from "@/components/GoogleAnalytics";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
+import { Analytics } from "@vercel/analytics/react";
 
 export const viewport: Viewport = {
   themeColor: "#3B82F6",
@@ -64,11 +66,15 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const gaMeasurementId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
+
   return (
     <html lang="ja">
       <body>
+        <GoogleAnalytics measurementId={gaMeasurementId} />
         <AuthProvider>{children}</AuthProvider>
         <PWAInstallBanner />
+        <Analytics />
       </body>
     </html>
   );

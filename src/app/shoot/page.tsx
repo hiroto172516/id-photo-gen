@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { CameraView } from '@/components/camera/CameraView';
+import { ShootFeedbackForm } from '@/components/feedback/ShootFeedbackForm';
 import { LegalLinks } from '@/components/LegalLinks';
 import { PhotoEditor } from '@/components/upload/PhotoEditor';
 import { PreviewWatermark } from '@/components/upload/PreviewWatermark';
@@ -25,6 +26,7 @@ import {
 } from '@/lib/imageProcessing';
 import { buildDownloadFileName, downloadBlob } from '@/lib/downloads';
 import { preloadFaceDetector } from '@/lib/faceDetection';
+import { trackEvent } from '@/lib/analytics';
 import { generateLPrintLayout, type LPrintLayoutResult } from '@/lib/printLayout';
 import {
   createManualCropState,
@@ -159,6 +161,11 @@ export default function ShootPage() {
     setUploadState('idle');
     setUploadedAsset(null);
     setIsProcessing(true);
+    trackEvent('shoot_started', {
+      source_kind: nextSourceImage.kind,
+      spec_id: nextSpecId,
+      background_preset_id: nextBackgroundPresetId,
+    });
 
     try {
       const nextBackgroundSettings = createBackgroundSettings(
@@ -179,6 +186,13 @@ export default function ShootPage() {
         setSelectedImage(processed);
         setManualCrop(processed.editorState.manualCrop);
         setPrintLayout(nextPrintLayout);
+      });
+      trackEvent('photo_processed', {
+        source_kind: nextSourceImage.kind,
+        spec_id: processed.cropMetadata.specId,
+        face_detected: processed.cropMetadata.faceDetected,
+        used_fallback: processed.cropMetadata.usedFallback,
+        background_fallback: processed.backgroundMetadata.usedFallback,
       });
     } catch {
       setProcessingError(errorMessage);
@@ -253,6 +267,10 @@ export default function ShootPage() {
         expiresAt: signResult.expiresAt,
       });
       setUploadState('success');
+      trackEvent('upload_completed', {
+        spec_id: selectedImage.cropMetadata.specId,
+        source_kind: sourceImage?.kind ?? 'file',
+      });
     } catch (error) {
       setUploadState('idle');
       setUploadError(
@@ -261,7 +279,7 @@ export default function ShootPage() {
           : 'アップロードに失敗しました。時間をおいて再度お試しください。'
       );
     }
-  }, [selectedImage]);
+  }, [selectedImage, sourceImage?.kind]);
 
   const handleUsePhoto = useCallback(async (dataUrl: string) => {
     const nextSourceImage: SourceImage = { kind: 'camera', dataUrl };
@@ -461,6 +479,11 @@ export default function ShootPage() {
               );
 
         downloadBlob(asset.blob, fileName);
+        trackEvent('single_download', {
+          spec_id: selectedImage.cropMetadata.specId,
+          mime_type: mimeType,
+          background_preset_id: selectedBackgroundPresetId,
+        });
       } else {
         const layout =
           printLayout && printLayout.mimeType === mimeType
@@ -471,6 +494,11 @@ export default function ShootPage() {
               });
 
         downloadBlob(layout.blob, fileName);
+        trackEvent('lprint_download', {
+          spec_id: selectedImage.cropMetadata.specId,
+          mime_type: mimeType,
+          cut_lines_enabled: cutLinesEnabled,
+        });
       }
     } catch {
       setDownloadError('ダウンロード用の画像生成に失敗しました。別の画像で再度お試しください。');
@@ -504,6 +532,10 @@ export default function ShootPage() {
         text: shareText,
         url: shareUrl,
       });
+      trackEvent('share_clicked', {
+        method: 'native',
+        spec_id: selectedSpecId,
+      });
     } catch (error) {
       if (error instanceof Error && error.name === 'AbortError') {
         return;
@@ -511,7 +543,7 @@ export default function ShootPage() {
 
       setShareError('共有メニューを開けませんでした。下のリンク共有をご利用ください。');
     }
-  }, [shareSupported, shareText, shareUrl]);
+  }, [selectedSpecId, shareSupported, shareText, shareUrl]);
 
   const handleCopyShareUrl = useCallback(async () => {
     setShareError(null);
@@ -520,13 +552,32 @@ export default function ShootPage() {
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopiedShareUrl(true);
+      trackEvent('share_clicked', {
+        method: 'copy',
+        spec_id: selectedSpecId,
+      });
     } catch {
       setShareError('共有URLのコピーに失敗しました。ブラウザの設定をご確認ください。');
       setCopiedShareUrl(false);
     }
-  }, [shareUrl]);
+  }, [selectedSpecId, shareUrl]);
 
   const uploadTtlHours = getUploadTtlHours();
+  const feedbackContext =
+    selectedImage && sourceImage
+      ? {
+          page: '/shoot',
+          specId: selectedImage.cropMetadata.specId,
+          backgroundPresetId: selectedBackgroundPresetId,
+          backgroundLabel: selectedImage.backgroundMetadata.colorLabel,
+          faceDetected: selectedImage.cropMetadata.faceDetected,
+          usedFallbacks: [
+            ...(selectedImage.cropMetadata.usedFallback ? ['face-crop'] : []),
+            ...(selectedImage.backgroundMetadata.usedFallback ? ['background-removal'] : []),
+          ],
+          sourceKind: sourceImage.kind,
+        }
+      : null;
   const previewCropRect =
     selectedImage && manualCrop
       ? getCropRectFromManualCrop(
@@ -923,6 +974,12 @@ export default function ShootPage() {
                       href={xShareUrl}
                       target="_blank"
                       rel="noreferrer"
+                      onClick={() =>
+                        trackEvent('share_clicked', {
+                          method: 'x',
+                          spec_id: selectedSpecId,
+                        })
+                      }
                       className="rounded-full border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
                     >
                       X で共有
@@ -932,6 +989,12 @@ export default function ShootPage() {
                       href={lineShareUrl}
                       target="_blank"
                       rel="noreferrer"
+                      onClick={() =>
+                        trackEvent('share_clicked', {
+                          method: 'line',
+                          spec_id: selectedSpecId,
+                        })
+                      }
                       className="rounded-full border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
                     >
                       LINE で共有
@@ -965,6 +1028,18 @@ export default function ShootPage() {
                 </div>
               )}
             </section>
+
+            {feedbackContext && (
+              <ShootFeedbackForm
+                context={feedbackContext}
+                onSubmitted={() => {
+                  trackEvent('feedback_submitted', {
+                    spec_id: feedbackContext.specId,
+                    source_kind: feedbackContext.sourceKind,
+                  });
+                }}
+              />
+            )}
 
             <div className="flex w-full gap-3">
               <button

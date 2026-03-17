@@ -36,8 +36,13 @@ npm run dev
 
 - 公開LP: `https://app-six-ochre-65.vercel.app`
 
+## 追加の環境変数
+
+- `NEXT_PUBLIC_GA_MEASUREMENT_ID`: Google Analytics 4 を有効化する場合のみ設定
+
 ## 補足
 
 - Day1のSNSタスクは、外部サービス上でのアカウント作成のみ手動対応が必要です。
 - リポジトリ内の素材は `/social-kit` と `day1_social_setup.md` に集約しています。
 - Day4 の認証設定手順は `../day4_auth_setup.md` に整理します。
+- Day23〜25 のフィードバック保存は `app/supabase/feedback_entries.sql` を Supabase SQL Editor で手動適用する前提です。

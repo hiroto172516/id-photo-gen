@@ -17,6 +17,9 @@ declare global {
     __mockBackgroundRemovalMode?: 'success' | 'failure';
     __sharedPayload?: { title?: string; text?: string; url?: string };
     __clipboardText?: string;
+    __trackedEvents?: Array<{ name: string; params?: Record<string, unknown> }>;
+    dataLayer?: unknown[];
+    gtag?: (...args: unknown[]) => void;
   }
 }
 
@@ -33,6 +36,7 @@ async function prepareClientEnvironment(page: Page) {
       confidence: 0.93,
     };
     window.__mockBackgroundRemovalMode = 'success';
+    window.__trackedEvents = [];
 
     const mediaDevices = navigator.mediaDevices ?? {};
     Object.defineProperty(mediaDevices, 'getUserMedia', {
@@ -74,6 +78,11 @@ async function prepareClientEnvironment(page: Page) {
     } catch {
       // navigator.clipboard が再定義不可でも writeText の差し替えだけで継続する
     }
+
+    window.dataLayer = [];
+    window.gtag = (...args: unknown[]) => {
+      window.dataLayer?.push(args);
+    };
   });
 }
 
@@ -154,6 +163,7 @@ test.describe('shoot page', () => {
     await expect(page.getByTestId('download-actions')).toBeVisible();
     await expect(page.getByTestId('print-guide')).toBeVisible();
     await expect(page.getByTestId('share-actions')).toBeVisible();
+    await expect(page.getByTestId('feedback-form')).toBeVisible();
     await expect(page.getByTestId('l-print-cut-lines-status')).toContainText('表示中');
 
     await page.getByTestId('use-photo-button').click();
@@ -196,6 +206,48 @@ test.describe('shoot page', () => {
     await page.getByTestId('use-photo-button').click();
     await expect(page.getByTestId('upload-success')).toBeVisible();
     await expect(page.getByTestId('upload-success')).toContainText('uploads/temporary/exp-9999999999-test.jpg');
+
+    await expect
+      .poll(async () => page.evaluate(() => window.__trackedEvents?.map((event) => event.name) ?? []))
+      .toEqual(
+        expect.arrayContaining([
+          'shoot_started',
+          'photo_processed',
+          'single_download',
+          'lprint_download',
+          'upload_completed',
+        ])
+      );
+  });
+
+  test('フィードバックを送信できる', async ({ page }) => {
+    await openShootPage(page);
+    await page.getByTestId('tab-file').click();
+    await page.getByTestId('file-input').setInputFiles(sampleImagePath);
+
+    await expect(page.getByTestId('feedback-form')).toBeVisible();
+    await page.getByTestId('feedback-category').selectOption('bug');
+    await page.getByTestId('feedback-rating').selectOption('2');
+    await page.getByTestId('feedback-message').fill('背景除去の案内が少し分かりにくかったです。');
+    await page.getByTestId('feedback-email').fill('user@example.com');
+    await page.getByTestId('feedback-submit').click();
+
+    await expect(page.getByTestId('feedback-success')).toContainText('フィードバックありがとうございます');
+    await expect
+      .poll(async () => page.evaluate(() => window.__trackedEvents?.map((event) => event.name) ?? []))
+      .toEqual(expect.arrayContaining(['feedback_submitted']));
+  });
+
+  test('フィードバックの入力不足はエラーを表示する', async ({ page }) => {
+    await openShootPage(page);
+    await page.getByTestId('tab-file').click();
+    await page.getByTestId('file-input').setInputFiles(sampleImagePath);
+
+    await page.getByTestId('feedback-message').fill('短い');
+    await page.getByTestId('feedback-submit').click();
+
+    await expect(page.getByTestId('feedback-error')).toContainText('入力内容を確認してください');
+    await expect(page.getByText('感想は10文字以上で入力してください。')).toBeVisible();
   });
 
   test('サイズ超過ファイルはバリデーションエラーを出す', async ({ page }) => {
@@ -371,6 +423,9 @@ test.describe('shoot page', () => {
     await expect
       .poll(async () => page.evaluate(() => window.__sharedPayload?.title ?? ''))
       .toBe('スマ撮り証明写真');
+    await expect
+      .poll(async () => page.evaluate(() => window.__trackedEvents?.map((event) => event.name) ?? []))
+      .toEqual(expect.arrayContaining(['share_clicked']));
   });
 
   test('ネイティブ共有がない環境では共有リンクとコピー導線を表示する', async ({ page }) => {
@@ -398,6 +453,9 @@ test.describe('shoot page', () => {
     await expect
       .poll(async () => page.evaluate(() => window.__clipboardText ?? ''))
       .toBe('https://app-six-ochre-65.vercel.app/shoot');
+    await expect
+      .poll(async () => page.evaluate(() => window.__trackedEvents?.map((event) => event.name) ?? []))
+      .toEqual(expect.arrayContaining(['share_clicked']));
   });
 
   test('カメラ権限拒否時は再試行導線つきエラーを表示する', async ({ page }) => {
@@ -421,6 +479,13 @@ test.describe('shoot page', () => {
     await openShootPage(page);
     await page.getByRole('link', { name: '利用規約' }).click();
     await expect(page).toHaveURL(/\/terms$/);
+  });
+
+  test('プライバシーポリシーに分析利用の記載がある', async ({ page }) => {
+    await page.goto('/privacy');
+
+    await expect(page.getByText('Vercel Analytics')).toBeVisible();
+    await expect(page.getByText('Google Analytics は測定IDが設定された環境でのみ有効化')).toBeVisible();
   });
 
   test('sitemap.xml と robots.txt を公開できる', async ({ page }) => {
