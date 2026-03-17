@@ -1,10 +1,11 @@
 import Link from "next/link";
+import { LegalLinks } from "@/components/LegalLinks";
 import { WaitlistForm } from "@/components/WaitlistForm";
 import { serviceName } from "../lib/brand";
 
 const benefits = [
-  "正式リリース時に先行案内を受け取れる",
-  "無料公開機能の開始タイミングをすぐ確認できる",
+  "機能追加や改善の案内を受け取れる",
+  "無料β版の更新情報をすぐ確認できる",
   "AIスーツ着せ替えの提供開始もまとめて受け取れる",
 ];
 
@@ -69,7 +70,7 @@ const trustBadges = [
   { label: "スマホ完結", icon: "📱" },
   { label: "自宅で撮り直し", icon: "🔁" },
   { label: "就活にも対応予定", icon: "💼" },
-  { label: "開発中", icon: "🚧" },
+  { label: "無料β公開中", icon: "🚀" },
 ];
 
 const freePlanItems = [
@@ -260,7 +261,7 @@ export default function Home() {
           <div className="mb-8 flex justify-center">
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-200/60 bg-blue-50/80 px-4 py-1.5 text-sm font-medium text-blue-700 backdrop-blur-sm">
               <span className="inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-blue-500" />
-              開発中のサービスです。正式公開を先行案内します
+              無料β公開中。ブラウザからそのまま試せます
             </div>
           </div>
 
@@ -271,13 +272,13 @@ export default function Home() {
               AIが証明写真に仕上げる
             </span>
             <br />
-            Webサービスを開発中です
+            Webサービスを無料β公開中です
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-center text-base leading-relaxed text-zinc-500 sm:text-lg">
-            写真館に行かず、私服の1枚から証明写真を整える体験を作っています。
+            写真館に行かず、私服の1枚から証明写真を整える体験を公開しています。
             <br className="hidden sm:inline" />
-            先に登録しておくと、無料公開と AI スーツ着せ替えの開始をまとめて受け取れます。
+            今は無料β版で背景変更、サイズ調整、L版レイアウト保存まで試せます。登録しておくと AI スーツ着せ替えの開始も受け取れます。
           </p>
 
           <p className="mx-auto mt-4 max-w-xl text-center text-sm leading-7 text-zinc-400">
@@ -291,11 +292,11 @@ export default function Home() {
           </p>
 
           <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
-            <a
-              href="#waitlist"
+            <Link
+              href="/shoot"
               className="group relative inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-blue-500/30 transition-all hover:shadow-xl hover:shadow-blue-500/40 active:scale-[0.98]"
             >
-              事前登録して公開を待つ
+              無料β版を試す
               <svg
                 className="h-4 w-4 transition-transform group-hover:translate-x-0.5"
                 fill="none"
@@ -309,7 +310,7 @@ export default function Home() {
                   d="M13 7l5 5m0 0l-5 5m5-5H6"
                 />
               </svg>
-            </a>
+            </Link>
             <a
               href="#how-it-works"
               className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-7 py-3.5 text-base font-medium text-zinc-700 transition-all hover:border-zinc-300 hover:bg-zinc-50 active:scale-[0.98]"
@@ -450,20 +451,20 @@ export default function Home() {
               公開予定の機能
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-zinc-500">
-              まずは無料で使える証明写真の基本機能を公開し、その後に AI
+              まずは無料β版として証明写真の基本機能を公開し、その後に AI
               スーツ着せ替えを有料機能として追加する予定です。
             </p>
           </div>
 
           <div className="mx-auto mt-16 grid max-w-3xl gap-6 sm:grid-cols-2">
             <div className="rounded-2xl border border-zinc-200 bg-white p-8">
-              <h3 className="text-lg font-bold text-zinc-800">無料公開予定</h3>
+              <h3 className="text-lg font-bold text-zinc-800">無料β版</h3>
               <p className="mt-4">
                 <span className="text-4xl font-extrabold tracking-tight">
                   ¥0
                 </span>
               </p>
-              <p className="mt-1 text-sm text-zinc-400">公開後すぐに使える予定</p>
+              <p className="mt-1 text-sm text-zinc-400">現在利用可能</p>
               <ul className="mt-8 space-y-3 text-sm text-zinc-600">
                 {freePlanItems.map((item) => (
                   <li key={item} className="flex items-start gap-2">
@@ -476,7 +477,7 @@ export default function Home() {
                 href="#waitlist"
                 className="mt-8 block rounded-xl border border-zinc-200 bg-zinc-50 py-3 text-center text-sm font-semibold text-zinc-700 transition-all hover:bg-zinc-100"
               >
-                公開通知を受け取る
+                更新通知を受け取る
               </a>
             </div>
 
@@ -528,8 +529,7 @@ export default function Home() {
               正式公開をメールで受け取る
             </h2>
             <p className="mt-4 max-w-xl text-base leading-8 text-zinc-300">
-              まだ開発中ですが、公開タイミングと機能追加の案内は先に受け取れます。
-              無料公開の開始と、AI スーツ着せ替えの提供開始をまとめてお知らせします。
+              無料β版はすでに使えますが、機能追加や改善、AI スーツ着せ替えの提供開始はメールでも案内します。
             </p>
             <ul className="mt-8 space-y-3 text-sm leading-7 text-zinc-200">
               {benefits.map((item) => (
@@ -584,8 +584,7 @@ export default function Home() {
             写真館に行かずに、スマホで整える体験を作っています
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-base leading-8 text-blue-100">
-            公開前の今は、待機リストから案内を受け取る形です。
-            リリース時にすぐ試したい場合は、先に登録しておいてください。
+            無料β版は現在公開中です。新機能の案内や AI スーツ着せ替えの開始を受け取りたい場合は登録してください。
           </p>
           <a
             href="#waitlist"
@@ -621,6 +620,10 @@ export default function Home() {
             <p className="text-xs text-zinc-400">
               &copy; 2026 {serviceName}. All rights reserved.
             </p>
+            <LegalLinks
+              className="flex items-center gap-4 text-xs text-zinc-400"
+              linkClassName="hover:text-zinc-600"
+            />
           </div>
         </div>
       </footer>

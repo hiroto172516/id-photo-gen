@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import { serviceDescription, serviceName, serviceTagline } from "../lib/brand";
+import { publicAppUrl, serviceDescription, serviceName, serviceTagline } from "../lib/brand";
 import { AuthProvider } from "@/components/AuthProvider";
 import PWAInstallBanner from "@/components/PWAInstallBanner";
 
@@ -9,7 +9,10 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://app-six-ochre-65.vercel.app"),
+  metadataBase: new URL(publicAppUrl),
+  verification: {
+    google: "z9fmLLrMUf4oGBlCqiq54cKHHdDuf2KzA97u83eWZ1s",
+  },
   title: `${serviceName} | ${serviceTagline}`,
   description: serviceDescription,
   keywords: [

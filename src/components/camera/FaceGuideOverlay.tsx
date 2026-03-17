@@ -2,6 +2,7 @@ export function FaceGuideOverlay() {
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
       <svg
+        data-testid="face-guide-overlay"
         className="absolute inset-0 h-full w-full"
         viewBox="0 0 100 100"
         preserveAspectRatio="none"

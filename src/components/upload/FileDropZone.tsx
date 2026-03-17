@@ -54,6 +54,7 @@ export function FileDropZone({ onFileSelected }: FileDropZoneProps) {
   return (
     <div className="w-full">
       <div
+        data-testid="file-drop-zone"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -89,6 +90,7 @@ export function FileDropZone({ onFileSelected }: FileDropZoneProps) {
         </div>
 
         <input
+          data-testid="file-input"
           ref={inputRef}
           type="file"
           accept="image/jpeg,image/png,image/webp"
@@ -98,7 +100,9 @@ export function FileDropZone({ onFileSelected }: FileDropZoneProps) {
       </div>
 
       {error && (
-        <p className="mt-3 text-center text-sm text-red-500">{error}</p>
+        <p data-testid="file-dropzone-error" className="mt-3 text-center text-sm text-red-500">
+          {error}
+        </p>
       )}
     </div>
   );

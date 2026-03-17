@@ -69,7 +69,7 @@ export function WaitlistForm() {
         メールアドレスだけで登録できます
       </h3>
       <p className="mt-3 text-sm leading-7 text-zinc-500">
-        リリース時の案内だけを送る前提です。開発中のため、送信先が未設定の本番環境では受付準備中の表示になります。
+        無料β版の更新や将来の有料機能案内だけを送る前提です。送信先が未設定の環境では受付準備中の表示になります。
       </p>
 
       <form className="mt-8 space-y-4" onSubmit={handleSubmit} noValidate>

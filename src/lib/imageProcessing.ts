@@ -1,5 +1,17 @@
 'use client';
 
+import { applyBackgroundRemoval, type BackgroundProcessingMetadata } from '@/lib/backgroundRemoval';
+import type { BackgroundSettings } from '@/lib/backgroundOptions';
+import { detectPrimaryFace, type CropMetadata } from '@/lib/faceDetection';
+import {
+  clampManualCropState,
+  createPhotoEditorState,
+  getCropRectFromManualCrop,
+  type ManualCropState,
+  type PhotoEditorState,
+} from '@/lib/photoEditor';
+import { calculatePhotoCrop } from '@/lib/photoCrop';
+import { getPhotoSpecPreset, type PhotoSpecId } from '@/lib/photoSpecs';
 import { getAllowedUploadMimeTypes, getMaxUploadFileSize } from '@/lib/uploadPolicy';
 
 export interface ProcessedImage {
@@ -8,7 +20,12 @@ export interface ProcessedImage {
   width: number;
   height: number;
   mimeType: string;
+  cropMetadata: CropMetadata;
+  backgroundMetadata: BackgroundProcessingMetadata;
+  editorState: PhotoEditorState;
 }
+
+export type OutputImageMimeType = 'image/jpeg' | 'image/png';
 
 const MAX_IMAGE_EDGE = 1600;
 const OUTPUT_MIME_TYPE = 'image/jpeg';
@@ -184,6 +201,135 @@ function getTargetSize(width: number, height: number) {
   };
 }
 
+function clampRectToCanvas(
+  cropRect: { x: number; y: number; width: number; height: number },
+  canvasWidth: number,
+  canvasHeight: number
+) {
+  const width = Math.min(cropRect.width, canvasWidth);
+  const height = Math.min(cropRect.height, canvasHeight);
+  const x = Math.min(Math.max(cropRect.x, 0), Math.max(0, canvasWidth - width));
+  const y = Math.min(Math.max(cropRect.y, 0), Math.max(0, canvasHeight - height));
+
+  return { x, y, width, height };
+}
+
+async function renderPhotoCanvas(editorState: PhotoEditorState, manualCropInput: ManualCropState) {
+  const sourceImage = await loadImage(editorState.sourceUrl);
+  const nextManualCrop = clampManualCropState(
+    editorState.sourceWidth,
+    editorState.sourceHeight,
+    editorState.aspectRatio,
+    editorState.baseCropRect,
+    manualCropInput
+  );
+  const safeCropRect = clampRectToCanvas(
+    getCropRectFromManualCrop(
+      editorState.sourceWidth,
+      editorState.sourceHeight,
+      editorState.aspectRatio,
+      editorState.baseCropRect,
+      nextManualCrop
+    ),
+    editorState.sourceWidth,
+    editorState.sourceHeight
+  );
+  const outputCanvas = document.createElement('canvas');
+
+  outputCanvas.width = Math.max(1, Math.round(safeCropRect.width));
+  outputCanvas.height = Math.max(1, Math.round(safeCropRect.height));
+
+  const outputCtx = outputCanvas.getContext('2d');
+  if (!outputCtx) {
+    throw new Error('Canvas API を利用できませんでした');
+  }
+
+  outputCtx.imageSmoothingEnabled = true;
+  outputCtx.imageSmoothingQuality = 'high';
+  outputCtx.drawImage(
+    sourceImage,
+    safeCropRect.x,
+    safeCropRect.y,
+    safeCropRect.width,
+    safeCropRect.height,
+    0,
+    0,
+    outputCanvas.width,
+    outputCanvas.height
+  );
+
+  return {
+    outputCanvas,
+    cropRect: safeCropRect,
+    manualCrop: nextManualCrop,
+  };
+}
+
+async function renderProcessedImage(
+  editorState: PhotoEditorState,
+  cropMetadata: CropMetadata,
+  backgroundMetadata: BackgroundProcessingMetadata,
+  manualCropInput: ManualCropState
+): Promise<ProcessedImage> {
+  const {
+    outputCanvas,
+    cropRect: safeCropRect,
+    manualCrop: nextManualCrop,
+  } = await renderPhotoCanvas(editorState, manualCropInput);
+
+  const blob = await canvasToBlob(outputCanvas, OUTPUT_MIME_TYPE, OUTPUT_QUALITY);
+  validateProcessedBlob(blob);
+  const previewUrl = await blobToDataUrl(blob);
+
+  return {
+    previewUrl,
+    blob,
+    width: outputCanvas.width,
+    height: outputCanvas.height,
+    mimeType: OUTPUT_MIME_TYPE,
+    cropMetadata: {
+      ...cropMetadata,
+      cropRect: safeCropRect,
+    },
+    backgroundMetadata,
+    editorState: {
+      ...editorState,
+      manualCrop: nextManualCrop,
+    },
+  };
+}
+
+async function buildProcessedImage(
+  normalizedCanvas: HTMLCanvasElement,
+  specId: PhotoSpecId,
+  backgroundSettings: BackgroundSettings
+): Promise<ProcessedImage> {
+  const faceDetection = await detectPrimaryFace(normalizedCanvas);
+  const cropMetadata = calculatePhotoCrop(
+    normalizedCanvas.width,
+    normalizedCanvas.height,
+    specId,
+    faceDetection
+  );
+  const backgroundResult = await applyBackgroundRemoval(normalizedCanvas, backgroundSettings);
+  const editorSourceBlob = await canvasToBlob(backgroundResult.canvas, 'image/png');
+  const editorSourceUrl = await blobToDataUrl(editorSourceBlob);
+  const editorState = createPhotoEditorState(
+    editorSourceUrl,
+    backgroundResult.canvas.width,
+    backgroundResult.canvas.height,
+    getPhotoSpecPreset(specId).widthMm / getPhotoSpecPreset(specId).heightMm,
+    cropMetadata.cropRect
+  );
+
+  return renderProcessedImage(
+    editorState,
+    cropMetadata,
+    backgroundResult.metadata,
+    editorState.manualCrop
+  );
+}
+
 function drawOrientedImage(
   ctx: CanvasRenderingContext2D,
   image: HTMLImageElement,
@@ -220,7 +366,11 @@ function drawOrientedImage(
   ctx.drawImage(image, 0, 0, width, height);
 }
 
-export async function processUploadedImage(file: File): Promise<ProcessedImage> {
+export async function processUploadedImage(
+  file: File,
+  specId: PhotoSpecId,
+  backgroundSettings: BackgroundSettings
+): Promise<ProcessedImage> {
   const buffer = await file.arrayBuffer();
   const orientation = file.type === 'image/jpeg' ? getExifOrientation(buffer) : 1;
   const jpegDimensions = file.type === 'image/jpeg' ? getJpegDimensions(buffer) : null;
@@ -259,23 +409,17 @@ export async function processUploadedImage(file: File): Promise<ProcessedImage> 
 
     drawOrientedImage(ctx, image, effectiveOrientation, drawWidth, drawHeight);
 
-    const blob = await canvasToBlob(canvas, OUTPUT_MIME_TYPE, OUTPUT_QUALITY);
-    validateProcessedBlob(blob);
-    const previewUrl = await blobToDataUrl(blob);
-
-    return {
-      previewUrl,
-      blob,
-      width: targetSize.width,
-      height: targetSize.height,
-      mimeType: OUTPUT_MIME_TYPE,
-    };
+    return buildProcessedImage(canvas, specId, backgroundSettings);
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
 }
 
-export async function createProcessedImageFromDataUrl(dataUrl: string): Promise<ProcessedImage> {
+export async function createProcessedImageFromDataUrl(
+  dataUrl: string,
+  specId: PhotoSpecId,
+  backgroundSettings: BackgroundSettings
+): Promise<ProcessedImage> {
   const image = await loadImage(dataUrl);
   const targetSize = getTargetSize(image.width, image.height);
   const canvas = document.createElement('canvas');
@@ -292,15 +436,34 @@ export async function createProcessedImageFromDataUrl(dataUrl: string): Promise<
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(image, 0, 0, targetSize.width, targetSize.height);
 
-  const blob = await canvasToBlob(canvas, OUTPUT_MIME_TYPE, OUTPUT_QUALITY);
-  validateProcessedBlob(blob);
-  const previewUrl = await blobToDataUrl(blob);
+  return buildProcessedImage(canvas, specId, backgroundSettings);
+}
+
+export async function renderEditedPhoto(
+  editorState: PhotoEditorState,
+  cropMetadata: CropMetadata,
+  backgroundMetadata: BackgroundProcessingMetadata,
+  manualCrop: ManualCropState
+) {
+  return renderProcessedImage(editorState, cropMetadata, backgroundMetadata, manualCrop);
+}
+
+export async function exportEditedPhoto(
+  editorState: PhotoEditorState,
+  manualCrop: ManualCropState,
+  mimeType: OutputImageMimeType
+) {
+  const { outputCanvas } = await renderPhotoCanvas(editorState, manualCrop);
+  const blob = await canvasToBlob(
+    outputCanvas,
+    mimeType,
+    mimeType === 'image/jpeg' ? OUTPUT_QUALITY : undefined
+  );
 
   return {
-    previewUrl,
     blob,
-    width: targetSize.width,
-    height: targetSize.height,
-    mimeType: OUTPUT_MIME_TYPE,
+    mimeType,
+    width: outputCanvas.width,
+    height: outputCanvas.height,
   };
 }

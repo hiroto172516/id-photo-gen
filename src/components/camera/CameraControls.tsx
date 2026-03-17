@@ -9,6 +9,7 @@ export function CameraControls({ onCapture, onSwitch, isLoading }: CameraControl
     <div className="absolute bottom-6 left-0 right-0 flex items-center justify-center gap-8">
       {/* カメラ切替ボタン */}
       <button
+        data-testid="camera-switch-button"
         onClick={onSwitch}
         disabled={isLoading}
         className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-white backdrop-blur-sm transition-all hover:bg-white/30 active:scale-95 disabled:opacity-50"
@@ -31,6 +32,7 @@ export function CameraControls({ onCapture, onSwitch, isLoading }: CameraControl
 
       {/* シャッターボタン */}
       <button
+        data-testid="camera-capture-button"
         onClick={onCapture}
         disabled={isLoading}
         className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-white/20 backdrop-blur-sm transition-all hover:bg-white/30 active:scale-95 disabled:opacity-50"

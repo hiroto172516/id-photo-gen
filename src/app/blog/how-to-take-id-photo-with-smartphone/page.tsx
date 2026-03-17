@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { LegalLinks } from '@/components/LegalLinks';
 import { serviceName } from '@/lib/brand';
 
 export const metadata: Metadata = {
@@ -391,11 +392,15 @@ export default function HowToTakeIdPhotoPage() {
 
         {/* フッター */}
         <footer className="border-t border-zinc-100 bg-zinc-50/50">
-          <div className="mx-auto max-w-3xl px-4 py-8 text-center text-xs text-zinc-400">
+          <div className="mx-auto flex max-w-3xl flex-col gap-3 px-4 py-8 text-center text-xs text-zinc-400">
             <p>&copy; 2026 {serviceName}. All rights reserved.</p>
-            <Link href="/" className="mt-2 inline-block hover:text-zinc-600">
+            <Link href="/" className="inline-block hover:text-zinc-600">
               ← ホームへ戻る
             </Link>
+            <LegalLinks
+              className="flex items-center justify-center gap-4"
+              linkClassName="hover:text-zinc-600"
+            />
           </div>
         </footer>
       </div>
