@@ -1,7 +1,10 @@
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 
 declare global {
   var __supabaseBrowserClient__: SupabaseClient | undefined;
+  interface Window {
+    __mockSupabaseSession?: Pick<Session, "access_token" | "token_type"> | null;
+  }
 }
 
 export function isSupabaseBrowserConfigured() {
@@ -31,6 +34,34 @@ export function getSupabaseBrowserClient() {
       },
     },
   );
+
+  const originalGetSession =
+    globalThis.__supabaseBrowserClient__.auth.getSession.bind(globalThis.__supabaseBrowserClient__.auth);
+
+  globalThis.__supabaseBrowserClient__.auth.getSession = (async () => {
+    if (typeof window !== "undefined" && "__mockSupabaseSession" in window) {
+      if (window.__mockSupabaseSession) {
+        return {
+          data: {
+            session: {
+              access_token: window.__mockSupabaseSession.access_token,
+              token_type: window.__mockSupabaseSession.token_type ?? "bearer",
+            } as Session,
+          },
+          error: null,
+        };
+      }
+
+      return {
+        data: {
+          session: null,
+        },
+        error: null,
+      };
+    }
+
+    return originalGetSession();
+  }) as typeof globalThis.__supabaseBrowserClient__.auth.getSession;
 
   return globalThis.__supabaseBrowserClient__;
 }

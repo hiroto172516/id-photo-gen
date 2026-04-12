@@ -20,7 +20,14 @@ export type AnalyticsEventName =
   | "single_download"
   | "lprint_download"
   | "upload_completed"
-  | "share_clicked";
+  | "share_clicked"
+  | "suit_generation_started"
+  | "suit_generation_succeeded"
+  | "suit_generation_failed"
+  | "suit_generation_applied"
+  | "payment_initiated"
+  | "payment_completed"
+  | "payment_required";
 
 export type AnalyticsEventParams = Record<string, string | number | boolean | undefined>;
 

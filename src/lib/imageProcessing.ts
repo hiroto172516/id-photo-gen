@@ -439,6 +439,36 @@ export async function createProcessedImageFromDataUrl(
   return buildProcessedImage(canvas, specId, backgroundSettings);
 }
 
+export async function createProcessedImageFromBlob(
+  blob: Blob,
+  specId: PhotoSpecId,
+  backgroundSettings: BackgroundSettings
+): Promise<ProcessedImage> {
+  const objectUrl = URL.createObjectURL(blob);
+
+  try {
+    const image = await loadImage(objectUrl);
+    const targetSize = getTargetSize(image.width, image.height);
+    const canvas = document.createElement('canvas');
+
+    canvas.width = targetSize.width;
+    canvas.height = targetSize.height;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Canvas API を利用できませんでした');
+    }
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(image, 0, 0, targetSize.width, targetSize.height);
+
+    return buildProcessedImage(canvas, specId, backgroundSettings);
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 export async function renderEditedPhoto(
   editorState: PhotoEditorState,
   cropMetadata: CropMetadata,

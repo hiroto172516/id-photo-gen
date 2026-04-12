@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { CameraView } from '@/components/camera/CameraView';
 import { ShootFeedbackForm } from '@/components/feedback/ShootFeedbackForm';
 import { LegalLinks } from '@/components/LegalLinks';
 import { PhotoEditor } from '@/components/upload/PhotoEditor';
+import { SuitGenerationPanel } from '@/components/upload/SuitGenerationPanel';
 import { PreviewWatermark } from '@/components/upload/PreviewWatermark';
 import { FileDropZone } from '@/components/upload/FileDropZone';
 import { preloadBackgroundRemoval } from '@/lib/backgroundRemoval';
@@ -17,6 +19,7 @@ import {
   type BackgroundPresetId,
 } from '@/lib/backgroundOptions';
 import {
+  createProcessedImageFromBlob,
   createProcessedImageFromDataUrl,
   exportEditedPhoto,
   processUploadedImage,
@@ -45,7 +48,18 @@ import { getSupabaseBrowserClient } from '@/lib/supabase';
 
 type Tab = 'camera' | 'file';
 type UploadState = 'idle' | 'uploading' | 'success';
-type SourceImage = { kind: 'camera'; dataUrl: string } | { kind: 'file'; file: File };
+type PreviewTier = 'free' | 'premium-ai';
+type PaymentResumeDraft = {
+  sourceDataUrl: string;
+  sourceKind: 'camera' | 'file' | 'generated';
+  specId: PhotoSpecId;
+  backgroundPresetId: BackgroundPresetId;
+  customBackgroundColor: string;
+};
+type SourceImage =
+  | { kind: 'camera'; dataUrl: string; accessTier: PreviewTier }
+  | { kind: 'file'; file: File; accessTier: PreviewTier }
+  | { kind: 'generated'; dataUrl: string; accessTier: PreviewTier };
 
 type UploadedAsset = {
   bucket: string;
@@ -54,6 +68,7 @@ type UploadedAsset = {
 };
 
 type DownloadTarget = 'single' | 'l-print';
+const PAYMENT_RESUME_STORAGE_KEY = 'shoot-payment-resume-draft';
 
 export default function ShootPage() {
   const [activeTab, setActiveTab] = useState<Tab>('camera');
@@ -80,6 +95,9 @@ export default function ShootPage() {
   const [shareSupported, setShareSupported] = useState(false);
   const [copiedShareUrl, setCopiedShareUrl] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [isPremiumLocked, setIsPremiumLocked] = useState(true);
+  const [premiumExpiresAt, setPremiumExpiresAt] = useState<string | null>(null);
+  const [selectedImageTier, setSelectedImageTier] = useState<PreviewTier>('free');
   const editorRenderSequenceRef = useRef(0);
   const layoutRenderSequenceRef = useRef(0);
   const selectedSpec = getPhotoSpecPreset(selectedSpecId);
@@ -87,6 +105,103 @@ export default function ShootPage() {
     selectedBackgroundPresetId,
     customBackgroundColor
   );
+  const router = useRouter();
+
+  // 決済状況チェック
+  const checkPaymentStatus = useCallback(async () => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+
+    try {
+      const res = await fetch('/api/stripe/status', {
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = (await res.json()) as { hasAccess: boolean; expiresAt: string | null };
+      if (data.hasAccess) {
+        setIsPremiumLocked(false);
+        setPremiumExpiresAt(data.expiresAt ?? null);
+        trackEvent('payment_completed');
+        return;
+      }
+
+      setIsPremiumLocked(true);
+      setPremiumExpiresAt(null);
+    } catch {
+      // ネットワークエラー時はロック状態を維持
+    }
+  }, []);
+
+  // マウント時に決済状況を確認
+  useEffect(() => {
+    void checkPaymentStatus();
+  }, [checkPaymentStatus]);
+
+  // Stripe リダイレクト後（?payment=success）に再確認
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('payment') === 'success') {
+        void checkPaymentStatus();
+      }
+    }
+  }, [checkPaymentStatus]);
+
+  // Stripe Checkout 開始
+  const handlePaymentRequired = useCallback(async () => {
+    const supabase = getSupabaseBrowserClient();
+    if (!supabase) return;
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session) {
+      router.push('/auth?redirect=/shoot');
+      return;
+    }
+
+    trackEvent('payment_initiated');
+
+    try {
+      if (typeof window !== 'undefined' && selectedImage) {
+        const draft: PaymentResumeDraft = {
+          sourceDataUrl:
+            sourceImage?.kind === 'camera' || sourceImage?.kind === 'generated'
+              ? sourceImage.dataUrl
+              : selectedImage.editorState.sourceUrl,
+          sourceKind: sourceImage?.kind ?? 'generated',
+          specId: selectedSpecId,
+          backgroundPresetId: selectedBackgroundPresetId,
+          customBackgroundColor,
+        };
+        window.sessionStorage.setItem(PAYMENT_RESUME_STORAGE_KEY, JSON.stringify(draft));
+      }
+
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const data = (await res.json()) as { ok: boolean; url?: string; alreadyPaid?: boolean };
+
+      if (data.alreadyPaid) {
+        void checkPaymentStatus();
+        return;
+      }
+
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch {
+      // エラー時は何もしない（次回再試行可能）
+    }
+  }, [
+    checkPaymentStatus,
+    customBackgroundColor,
+    router,
+    selectedBackgroundPresetId,
+    selectedImage,
+    selectedSpecId,
+    sourceImage,
+  ]);
 
   useEffect(() => {
     setShareSupported(typeof navigator !== 'undefined' && typeof navigator.share === 'function');
@@ -173,7 +288,7 @@ export default function ShootPage() {
         nextCustomBackgroundColor
       );
       const processed =
-        nextSourceImage.kind === 'camera'
+        nextSourceImage.kind === 'camera' || nextSourceImage.kind === 'generated'
           ? await createProcessedImageFromDataUrl(
               nextSourceImage.dataUrl,
               nextSpecId,
@@ -184,6 +299,7 @@ export default function ShootPage() {
 
       startTransition(() => {
         setSelectedImage(processed);
+        setSelectedImageTier(nextSourceImage.accessTier);
         setManualCrop(processed.editorState.manualCrop);
         setPrintLayout(nextPrintLayout);
       });
@@ -200,6 +316,60 @@ export default function ShootPage() {
       setIsProcessing(false);
     }
   }, [cutLinesEnabled, runLayoutGeneration]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || selectedImage) {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') !== 'success') {
+      return;
+    }
+
+    const rawDraft = window.sessionStorage.getItem(PAYMENT_RESUME_STORAGE_KEY);
+    if (!rawDraft) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const restoreDraft = async () => {
+      try {
+        const draft = JSON.parse(rawDraft) as PaymentResumeDraft;
+        setSelectedSpecId(draft.specId);
+        setSelectedBackgroundPresetId(draft.backgroundPresetId);
+        setCustomBackgroundColor(draft.customBackgroundColor);
+
+        const nextSourceImage: SourceImage = {
+          kind: draft.sourceKind === 'file' ? 'generated' : draft.sourceKind,
+          dataUrl: draft.sourceDataUrl,
+          accessTier: 'free',
+        };
+
+        if (cancelled) {
+          return;
+        }
+
+        setSourceImage(nextSourceImage);
+        await runProcessing(
+          nextSourceImage,
+          draft.specId,
+          draft.backgroundPresetId,
+          draft.customBackgroundColor,
+          '決済後の編集内容を復元できませんでした。画像を再度選択してください。'
+        );
+      } finally {
+        window.sessionStorage.removeItem(PAYMENT_RESUME_STORAGE_KEY);
+      }
+    };
+
+    void restoreDraft();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [runProcessing, selectedImage]);
 
   const handleUpload = useCallback(async () => {
     if (!selectedImage) {
@@ -270,6 +440,7 @@ export default function ShootPage() {
       trackEvent('upload_completed', {
         spec_id: selectedImage.cropMetadata.specId,
         source_kind: sourceImage?.kind ?? 'file',
+        asset_tier: selectedImageTier,
       });
     } catch (error) {
       setUploadState('idle');
@@ -279,10 +450,10 @@ export default function ShootPage() {
           : 'アップロードに失敗しました。時間をおいて再度お試しください。'
       );
     }
-  }, [selectedImage, sourceImage?.kind]);
+  }, [selectedImage, selectedImageTier, sourceImage?.kind]);
 
   const handleUsePhoto = useCallback(async (dataUrl: string) => {
-    const nextSourceImage: SourceImage = { kind: 'camera', dataUrl };
+    const nextSourceImage: SourceImage = { kind: 'camera', dataUrl, accessTier: 'free' };
     setSourceImage(nextSourceImage);
     await runProcessing(
       nextSourceImage,
@@ -294,7 +465,7 @@ export default function ShootPage() {
   }, [customBackgroundColor, runProcessing, selectedBackgroundPresetId, selectedSpecId]);
 
   const handleFileSelected = useCallback(async (file: File) => {
-    const nextSourceImage: SourceImage = { kind: 'file', file };
+    const nextSourceImage: SourceImage = { kind: 'file', file, accessTier: 'free' };
     setSourceImage(nextSourceImage);
     await runProcessing(
       nextSourceImage,
@@ -319,6 +490,7 @@ export default function ShootPage() {
     setCopiedShareUrl(false);
     setUploadState('idle');
     setUploadedAsset(null);
+    setSelectedImageTier('free');
   }, []);
 
   const handleManualCropCommit = useCallback(async (nextManualCrop: ManualCropState) => {
@@ -483,6 +655,7 @@ export default function ShootPage() {
           spec_id: selectedImage.cropMetadata.specId,
           mime_type: mimeType,
           background_preset_id: selectedBackgroundPresetId,
+          asset_tier: selectedImageTier,
         });
       } else {
         const layout =
@@ -498,6 +671,7 @@ export default function ShootPage() {
           spec_id: selectedImage.cropMetadata.specId,
           mime_type: mimeType,
           cut_lines_enabled: cutLinesEnabled,
+          asset_tier: selectedImageTier,
         });
       }
     } catch {
@@ -511,7 +685,47 @@ export default function ShootPage() {
     printLayout,
     selectedBackgroundPresetId,
     selectedImage,
+    selectedImageTier,
   ]);
+
+  const handleGeneratedPremiumImage = useCallback(async ({ blob }: { previewUrl: string; blob: Blob }) => {
+    setProcessingError(null);
+    setPrintLayoutError(null);
+    setUploadError(null);
+    setDownloadError(null);
+    setShareError(null);
+    setCopiedShareUrl(false);
+    setUploadState('idle');
+    setUploadedAsset(null);
+    setIsProcessing(true);
+
+    try {
+      const processed = await createProcessedImageFromBlob(blob, selectedSpecId, backgroundSettings);
+      const nextPrintLayout = await runLayoutGeneration(processed, cutLinesEnabled);
+      const nextSourceImage: SourceImage = {
+        kind: 'generated',
+        dataUrl: processed.editorState.sourceUrl,
+        accessTier: 'premium-ai',
+      };
+
+      startTransition(() => {
+        setSourceImage(nextSourceImage);
+        setSelectedImage(processed);
+        setSelectedImageTier('premium-ai');
+        setManualCrop(processed.editorState.manualCrop);
+        setPrintLayout(nextPrintLayout);
+      });
+
+      trackEvent('suit_generation_applied', {
+        spec_id: processed.cropMetadata.specId,
+        background_preset_id: selectedBackgroundPresetId,
+      });
+    } catch {
+      setProcessingError('AI画像の反映に失敗しました。もう一度生成してください。');
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [backgroundSettings, cutLinesEnabled, runLayoutGeneration, selectedBackgroundPresetId, selectedSpecId]);
 
   const shareUrl = `${publicAppUrl}/shoot`;
   const shareText = `${serviceName}で${selectedSpec.label}の証明写真をスマホから整えられます。背景変更とL版レイアウトまで無料で試せます。`;
@@ -575,7 +789,7 @@ export default function ShootPage() {
             ...(selectedImage.cropMetadata.usedFallback ? ['face-crop'] : []),
             ...(selectedImage.backgroundMetadata.usedFallback ? ['background-removal'] : []),
           ],
-          sourceKind: sourceImage.kind,
+          sourceKind: sourceImage.kind === 'generated' ? 'file' : sourceImage.kind,
         }
       : null;
   const previewCropRect =
@@ -588,6 +802,15 @@ export default function ShootPage() {
           manualCrop
         )
       : null;
+  const premiumExpiryText = premiumExpiresAt
+    ? new Date(premiumExpiresAt).toLocaleString('ja-JP', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null;
 
   return (
     <div className="min-h-screen bg-white text-zinc-900">
@@ -732,9 +955,20 @@ export default function ShootPage() {
                   void handleManualCropCommit(nextManualCrop);
                 }}
                 onReset={handleManualCropReset}
-                showWatermark
+                showWatermark={selectedImageTier === 'free'}
               />
             )}
+
+            <SuitGenerationPanel
+              sourceBlob={selectedImage.blob}
+              sourceMimeType={selectedImage.mimeType}
+              isPremiumLocked={isPremiumLocked}
+              hasPremiumAccess={!isPremiumLocked}
+              onPaymentRequired={() => { void handlePaymentRequired(); }}
+              onGenerated={(result) => {
+                void handleGeneratedPremiumImage(result);
+              }}
+            />
 
             <div
               data-testid="image-preview-meta"
@@ -743,12 +977,22 @@ export default function ShootPage() {
               {activeTab === 'file' ? '補正後' : '撮影'}プレビュー {selectedImage.width}×{selectedImage.height}px
             </div>
 
-            <div
-              data-testid="free-preview-note"
-              className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
-            >
-              無料版プレビューには透かしを重ねて表示しています。ダウンロード画像そのものには透かしを入れません。
-            </div>
+            {selectedImageTier === 'free' ? (
+              <div
+                data-testid="free-preview-note"
+                className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800"
+              >
+                無料プレビューには透かしを重ねて表示しています。通常のダウンロード画像そのものには透かしを入れません。AIスーツ着せ替えは決済後に高解像度保存へ反映できます。
+              </div>
+            ) : (
+              <div
+                data-testid="premium-preview-note"
+                className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+              >
+                AIスーツ着せ替えの購入済みプレビューです。透かしは解除されており、このまま高解像度で保存できます。
+                {premiumExpiryText ? ` 利用期限: ${premiumExpiryText}` : ''}
+              </div>
+            )}
 
             <section
               data-testid="l-print-layout"
@@ -781,7 +1025,9 @@ export default function ShootPage() {
                           alt="L版印刷レイアウトのプレビュー"
                           className="h-full w-full object-contain"
                         />
-                        <PreviewWatermark testId="l-print-preview-watermark" />
+                        {selectedImageTier === 'free' && (
+                          <PreviewWatermark testId="l-print-preview-watermark" />
+                        )}
                       </div>
                     ) : (
                       <div className="flex h-full items-center justify-center px-6 text-center text-xs text-zinc-400">
@@ -855,7 +1101,7 @@ export default function ShootPage() {
                   </p>
                 </div>
                 <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
-                  透かしなし保存
+                  {selectedImageTier === 'premium-ai' ? '高解像度保存' : '透かしなし保存'}
                 </span>
               </div>
 
