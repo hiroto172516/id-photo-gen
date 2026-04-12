@@ -445,14 +445,14 @@ export default function Home() {
         <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
           <div className="text-center">
             <p className="text-sm font-semibold uppercase tracking-widest text-blue-600">
-              Roadmap
+              Pricing
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">
-              公開予定の機能
+              シンプルな料金プラン
             </h2>
             <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-zinc-500">
-              まずは無料β版として証明写真の基本機能を公開し、その後に AI
-              スーツ着せ替えを有料機能として追加する予定です。
+              証明写真の基本機能は無料。AI
+              スーツ着せ替えは1回300円で今すぐご利用いただけます。
             </p>
           </div>
 
@@ -484,21 +484,21 @@ export default function Home() {
             <div className="relative rounded-2xl border-2 border-blue-500/80 bg-white p-8 shadow-xl shadow-blue-500/10">
               <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
                 <span className="rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-4 py-1 text-xs font-bold text-white shadow-md shadow-blue-500/30">
-                  開発中
+                  NEW
                 </span>
               </div>
 
-              <h3 className="text-lg font-bold text-blue-600">将来の有料機能</h3>
+              <h3 className="text-lg font-bold text-blue-600">プレミアム</h3>
               <p className="mt-4">
                 <span className="text-4xl font-extrabold tracking-tight">
                   ¥300
                 </span>
                 <span className="ml-1 text-sm font-normal text-zinc-400">
-                  / 枚 想定
+                  / 回
                 </span>
               </p>
               <p className="mt-1 text-sm text-zinc-400">
-                AIスーツ着せ替えを追加予定
+                AIスーツ着せ替え（24時間有効）
               </p>
               <ul className="mt-8 space-y-3 text-sm text-zinc-600">
                 {premiumPlanItems.map((item) => (
@@ -509,10 +509,10 @@ export default function Home() {
                 ))}
               </ul>
               <a
-                href="#waitlist"
+                href="/shoot"
                 className="mt-8 block rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 py-3 text-center text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-all hover:shadow-lg hover:shadow-blue-500/35"
               >
-                AI機能の案内を受け取る
+                今すぐ使う
               </a>
             </div>
           </div>
@@ -529,7 +529,7 @@ export default function Home() {
               正式公開をメールで受け取る
             </h2>
             <p className="mt-4 max-w-xl text-base leading-8 text-zinc-300">
-              無料β版はすでに使えますが、機能追加や改善、AI スーツ着せ替えの提供開始はメールでも案内します。
+              無料β版はすでに使えます。機能追加や改善のお知らせをメールでも受け取れます。
             </p>
             <ul className="mt-8 space-y-3 text-sm leading-7 text-zinc-200">
               {benefits.map((item) => (

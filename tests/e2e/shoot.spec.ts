@@ -17,7 +17,8 @@ declare global {
     __mockBackgroundRemovalMode?: 'success' | 'failure';
     __sharedPayload?: { title?: string; text?: string; url?: string };
     __clipboardText?: string;
-    __trackedEvents?: Array<{ name: string; params?: Record<string, unknown> }>;
+    __trackedEvents?: Array<{ name: string; params?: Record<string, string | number | boolean> }>;
+    __mockSupabaseSession?: { access_token: string; token_type?: string } | null;
     dataLayer?: unknown[];
     gtag?: (...args: unknown[]) => void;
   }
@@ -37,6 +38,7 @@ async function prepareClientEnvironment(page: Page) {
     };
     window.__mockBackgroundRemovalMode = 'success';
     window.__trackedEvents = [];
+    window.__mockSupabaseSession = null;
 
     const mediaDevices = navigator.mediaDevices ?? {};
     Object.defineProperty(mediaDevices, 'getUserMedia', {
@@ -86,9 +88,35 @@ async function prepareClientEnvironment(page: Page) {
   });
 }
 
+async function mockStripeStatus(page: Page, options?: { hasAccess?: boolean; expiresAt?: string | null }) {
+  await page.route('**/api/stripe/status', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        hasAccess: options?.hasAccess ?? false,
+        expiresAt: options?.expiresAt ?? null,
+      }),
+    });
+  });
+}
+
 async function openShootPage(page: Page) {
   await page.goto('/shoot');
   await expect(page.getByRole('heading', { name: '写真を用意する' })).toBeVisible({ timeout: 10000 });
+}
+
+async function mockFeedbackSuccess(page: Page) {
+  await page.route('**/api/feedback', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
+        message: 'フィードバックありがとうございます。改善の参考にします。',
+      }),
+    });
+  });
 }
 
 async function mockUploadSuccess(page: Page) {
@@ -122,6 +150,7 @@ test.describe('shoot page', () => {
   });
 
   test('初期表示とタブ切替が動作する', async ({ page }) => {
+    await mockStripeStatus(page);
     await openShootPage(page);
 
     await expect(page.getByTestId('guest-banner')).toBeVisible();
@@ -143,6 +172,7 @@ test.describe('shoot page', () => {
 
   test('ファイルアップロードから成功表示まで進める', async ({ page }) => {
     await mockUploadSuccess(page);
+    await mockStripeStatus(page);
     await openShootPage(page);
     await page.getByTestId('photo-spec-select').selectOption('passport');
     await page.getByTestId('background-preset-blue').click();
@@ -175,6 +205,7 @@ test.describe('shoot page', () => {
 
   test('無料版の統合フローを通しで完了できる', async ({ page }) => {
     await mockUploadSuccess(page);
+    await mockStripeStatus(page);
     await openShootPage(page);
 
     await page.getByTestId('tab-file').click();
@@ -221,6 +252,8 @@ test.describe('shoot page', () => {
   });
 
   test('フィードバックを送信できる', async ({ page }) => {
+    await mockFeedbackSuccess(page);
+    await mockStripeStatus(page);
     await openShootPage(page);
     await page.getByTestId('tab-file').click();
     await page.getByTestId('file-input').setInputFiles(sampleImagePath);
@@ -239,6 +272,7 @@ test.describe('shoot page', () => {
   });
 
   test('フィードバックの入力不足はエラーを表示する', async ({ page }) => {
+    await mockStripeStatus(page);
     await openShootPage(page);
     await page.getByTestId('tab-file').click();
     await page.getByTestId('file-input').setInputFiles(sampleImagePath);
@@ -251,6 +285,7 @@ test.describe('shoot page', () => {
   });
 
   test('サイズ超過ファイルはバリデーションエラーを出す', async ({ page }) => {
+    await mockStripeStatus(page);
     await openShootPage(page);
     await page.getByTestId('tab-file').click();
     await expect(page.getByTestId('file-drop-zone')).toBeVisible();
@@ -275,6 +310,7 @@ test.describe('shoot page', () => {
       });
     });
 
+    await mockStripeStatus(page);
     await openShootPage(page);
     await page.getByTestId('tab-file').click();
     await expect(page.getByTestId('file-drop-zone')).toBeVisible();
@@ -291,6 +327,7 @@ test.describe('shoot page', () => {
       window.__mockFaceDetectionResult = null;
     });
 
+    await mockStripeStatus(page);
     await openShootPage(page);
     await page.getByTestId('tab-file').click();
     await expect(page.getByTestId('file-drop-zone')).toBeVisible();
@@ -306,6 +343,7 @@ test.describe('shoot page', () => {
       window.__mockBackgroundRemovalMode = 'failure';
     });
 
+    await mockStripeStatus(page);
     await openShootPage(page);
     await page.getByTestId('tab-file').click();
     await expect(page.getByTestId('file-drop-zone')).toBeVisible();
@@ -320,6 +358,7 @@ test.describe('shoot page', () => {
   });
 
   test('手動トリミングのズームとリセットが反映される', async ({ page }) => {
+    await mockStripeStatus(page);
     await openShootPage(page);
     await page.getByTestId('tab-file').click();
     await expect(page.getByTestId('file-input')).toBeAttached();
@@ -352,6 +391,7 @@ test.describe('shoot page', () => {
   });
 
   test('規格変更で編集プレビューが再計算される', async ({ page }) => {
+    await mockStripeStatus(page);
     await openShootPage(page);
     await page.getByTestId('tab-file').click();
     await expect(page.getByTestId('file-input')).toBeAttached();
@@ -368,6 +408,7 @@ test.describe('shoot page', () => {
   });
 
   test('カットライン表示を切り替えられる', async ({ page }) => {
+    await mockStripeStatus(page);
     await openShootPage(page);
     await page.getByTestId('tab-file').click();
     await page.getByTestId('file-input').setInputFiles(sampleImagePath);
@@ -382,6 +423,7 @@ test.describe('shoot page', () => {
   });
 
   test('単体写真とL版のダウンロードを開始できる', async ({ page }) => {
+    await mockStripeStatus(page);
     await openShootPage(page);
     await page.getByTestId('tab-file').click();
     await page.getByTestId('file-input').setInputFiles(sampleImagePath);
@@ -410,6 +452,7 @@ test.describe('shoot page', () => {
       });
     });
 
+    await mockStripeStatus(page);
     await openShootPage(page);
     await page.getByTestId('tab-file').click();
     await page.getByTestId('file-input').setInputFiles(sampleImagePath);
@@ -441,6 +484,7 @@ test.describe('shoot page', () => {
       }
     });
 
+    await mockStripeStatus(page);
     await openShootPage(page);
     await page.getByTestId('tab-file').click();
     await page.getByTestId('file-input').setInputFiles(sampleImagePath);
@@ -459,6 +503,7 @@ test.describe('shoot page', () => {
   });
 
   test('カメラ権限拒否時は再試行導線つきエラーを表示する', async ({ page }) => {
+    await mockStripeStatus(page);
     await openShootPage(page);
 
     await expect(page.getByTestId('camera-error')).toBeVisible({ timeout: 10000 });
@@ -512,5 +557,247 @@ test.describe('shoot page', () => {
     await expect(page.getByText('Product Hunt', { exact: true })).toBeVisible();
     await expect(page.getByText('Turn a smartphone photo into an ID photo-ready print sheet in your browser')).toBeVisible();
     await expect(page.getByText('https://app-six-ochre-65.vercel.app/sitemap.xml')).toBeVisible();
+  });
+
+  test('プレミアムロック状態でSuitGenerationPanelが表示される', async ({ page }) => {
+    await mockUploadSuccess(page);
+    await mockStripeStatus(page);
+    await openShootPage(page);
+    await page.getByTestId('tab-file').click();
+    await page.getByTestId('file-input').setInputFiles(sampleImagePath);
+
+    await expect(page.getByTestId('photo-editor')).toBeVisible();
+    await expect(page.getByTestId('suit-generation-panel')).toBeVisible();
+    await expect(page.getByTestId('suit-premium-overlay')).toBeVisible();
+    await expect(page.getByTestId('suit-premium-overlay').getByText('AIスーツ着せ替え')).toBeVisible();
+    await expect(page.getByTestId('suit-payment-button')).toBeVisible();
+  });
+
+  test('Stripeテストモード想定で決済完了後にAI機能を解放できる', async ({ page }) => {
+    let hasAccess = false;
+
+    await page.addInitScript(() => {
+      window.__mockSupabaseSession = {
+        access_token: 'test-access-token',
+        token_type: 'bearer',
+      };
+    });
+    await page.route('**/api/stripe/status', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          hasAccess,
+          expiresAt: hasAccess ? '2099-12-31T00:00:00.000Z' : null,
+        }),
+      });
+    });
+    await page.route('**/api/stripe/checkout', async (route) => {
+      hasAccess = true;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          url: 'http://127.0.0.1:3001/shoot?payment=success&session_id=cs_test_123',
+        }),
+      });
+    });
+
+    await mockUploadSuccess(page);
+    await openShootPage(page);
+    await page.getByTestId('tab-file').click();
+    await page.getByTestId('file-input').setInputFiles(sampleImagePath);
+
+    await page.getByTestId('suit-payment-button').click();
+
+    await expect(page).toHaveURL(/payment=success/);
+    await expect(page.getByTestId('suit-premium-overlay')).toHaveCount(0);
+    await expect(page.getByTestId('suit-premium-ready')).toBeVisible();
+  });
+
+  test('スーツ生成の成功フロー', async ({ page }) => {
+    await page.route('**/api/ai/generate-suit', async (route) => {
+      // 1x1 PNG の最小base64データをダミーとして返す
+      const dummyBase64 =
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          imageBase64: dummyBase64,
+          imageMimeType: 'image/png',
+          qualityScore: 0.8,
+        }),
+      });
+    });
+    await page.addInitScript(() => {
+      window.__mockSupabaseSession = {
+        access_token: 'test-access-token',
+        token_type: 'bearer',
+      };
+    });
+
+    await mockUploadSuccess(page);
+    await mockStripeStatus(page, {
+      hasAccess: true,
+      expiresAt: '2099-12-31T00:00:00.000Z',
+    });
+    await openShootPage(page);
+    await page.getByTestId('tab-file').click();
+    await page.getByTestId('file-input').setInputFiles(sampleImagePath);
+
+    await expect(page.getByTestId('suit-generation-panel')).toBeVisible();
+    await page.getByTestId('suit-generate-button').click();
+    await expect(page.getByTestId('suit-preview')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('suit-use-button')).toBeVisible();
+    await expect(page.getByTestId('suit-regenerate-button')).toBeVisible();
+    await page.getByTestId('suit-use-button').click();
+    await expect(page.getByTestId('premium-preview-note')).toBeVisible();
+    await expect(page.getByTestId('photo-preview-watermark')).toHaveCount(0);
+    await expect(page.getByTestId('l-print-preview-watermark')).toHaveCount(0);
+    await expect(page.getByText('高解像度保存')).toBeVisible();
+  });
+
+  test('決済必須エラー時は再決済導線を表示する', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__mockSupabaseSession = {
+        access_token: 'test-access-token',
+        token_type: 'bearer',
+      };
+    });
+    await page.route('**/api/ai/generate-suit', async (route) => {
+      await route.fulfill({
+        status: 402,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: false,
+          message: 'AIスーツ着せ替えには決済が必要です。',
+        }),
+      });
+    });
+    await page.route('**/api/stripe/checkout', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          url: 'http://127.0.0.1:3001/shoot?payment=success&session_id=cs_test_123',
+        }),
+      });
+    });
+
+    await mockUploadSuccess(page);
+    await mockStripeStatus(page, {
+      hasAccess: true,
+      expiresAt: '2099-12-31T00:00:00.000Z',
+    });
+    await openShootPage(page);
+    await page.getByTestId('tab-file').click();
+    await page.getByTestId('file-input').setInputFiles(sampleImagePath);
+
+    await expect(page.getByTestId('suit-generation-panel')).toBeVisible();
+    await page.getByTestId('suit-generate-button').click();
+    await expect(page.getByTestId('suit-error-banner')).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('suit-error-banner')).toContainText('300円の決済が必要');
+    await expect(page.getByTestId('suit-error-action')).toBeVisible();
+  });
+
+  test('撮影→AI加工→決済→ダウンロード の全有料フロー統合テスト', async ({ page }) => {
+    // Supabase ログイン済みセッションをモック
+    await page.addInitScript(() => {
+      window.__mockSupabaseSession = {
+        access_token: 'test-access-token',
+        token_type: 'bearer',
+      };
+    });
+
+    // Stripe ステータス: 決済前は未購入、checkout 呼び出し後に購入済みへ切り替え
+    let hasAccess = false;
+    await page.route('**/api/stripe/status', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          hasAccess,
+          expiresAt: hasAccess ? '2099-12-31T00:00:00.000Z' : null,
+        }),
+      });
+    });
+    await page.route('**/api/stripe/checkout', async (route) => {
+      hasAccess = true;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          url: 'http://127.0.0.1:3001/shoot?payment=success&session_id=cs_test_456',
+        }),
+      });
+    });
+
+    // AI 生成 API: 成功レスポンスをモック（1x1 PNG）
+    const dummyBase64 =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+    await page.route('**/api/ai/generate-suit', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ok: true,
+          imageBase64: dummyBase64,
+          imageMimeType: 'image/png',
+          qualityScore: 0.9,
+        }),
+      });
+    });
+
+    await mockUploadSuccess(page);
+
+    // --- Step 1: ファイルアップロード ---
+    await openShootPage(page);
+    await page.getByTestId('tab-file').click();
+    await page.getByTestId('file-input').setInputFiles(sampleImagePath);
+    await expect(page.getByTestId('photo-editor')).toBeVisible();
+
+    // 背景をライトブルーに変更
+    await page.getByTestId('background-preset-blue').click();
+    await expect(page.getByTestId('selected-background-label')).toContainText('ライトブルー');
+
+    // プレミアムロックが表示されていることを確認
+    await expect(page.getByTestId('suit-premium-overlay')).toBeVisible();
+
+    // --- Step 2: 決済フロー ---
+    await page.getByTestId('suit-payment-button').click();
+
+    // 決済完了後に ?payment=success で戻ることを確認
+    await expect(page).toHaveURL(/payment=success/);
+
+    // ロックが解除され、決済済み表示になることを確認
+    await expect(page.getByTestId('suit-premium-overlay')).toHaveCount(0);
+    await expect(page.getByTestId('suit-premium-ready')).toBeVisible();
+
+    // --- Step 3: AI スーツ生成 ---
+    await expect(page.getByTestId('suit-generation-panel')).toBeVisible();
+    await page.getByTestId('suit-generate-button').click();
+    await expect(page.getByTestId('suit-preview')).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('suit-use-button')).toBeVisible();
+    await expect(page.getByTestId('suit-regenerate-button')).toBeVisible();
+
+    // 「この画像を使う」で AI 生成画像を採用
+    await page.getByTestId('suit-use-button').click();
+
+    // 透かしが除去され、高解像度保存導線が表示されることを確認
+    await expect(page.getByTestId('premium-preview-note')).toBeVisible();
+    await expect(page.getByTestId('photo-preview-watermark')).toHaveCount(0);
+    await expect(page.getByTestId('l-print-preview-watermark')).toHaveCount(0);
+    await expect(page.getByText('高解像度保存')).toBeVisible();
+
+    // --- Step 4: ダウンロード ---
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByTestId('download-single-jpeg').click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toMatch(/^id-photo-.*\.jpg$/);
   });
 });
