@@ -10,6 +10,10 @@ export const metadata: Metadata = {
   alternates: {
     canonical: `${publicAppUrl}/commercial-transactions`,
   },
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 const sections = [

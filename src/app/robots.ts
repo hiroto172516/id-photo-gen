@@ -5,8 +5,8 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      allow: ["/", "/shoot", "/blog", "/terms", "/privacy", "/commercial-transactions", "/social-kit"],
-      disallow: ["/api/", "/auth/callback"],
+      allow: ["/", "/shoot", "/blog", "/terms", "/privacy", "/social-kit"],
+      disallow: ["/api/", "/auth/callback", "/commercial-transactions"],
     },
     sitemap: `${publicAppUrl}/sitemap.xml`,
     host: publicAppUrl,
