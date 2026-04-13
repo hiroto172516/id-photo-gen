@@ -162,27 +162,30 @@ export function AuthScreen() {
     <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
       <section className="rounded-[2rem] border border-white/10 bg-slate-950 p-7 text-white shadow-[0_24px_90px_rgba(15,23,42,0.36)] sm:p-8">
         <p className="text-sm font-semibold uppercase tracking-[0.28em] text-sky-300">
-          Auth Access
+          Account
         </p>
         <h1 className="mt-4 text-4xl font-black tracking-tight">
-          先行ユーザー向けの認証導線
+          {serviceName} にログイン
         </h1>
         <p className="mt-5 text-sm leading-8 text-slate-300">
-          {serviceName} の利用画面はまだ開発中です。Day4 ではメール認証と Google
-          OAuth の土台を入れ、公開前でも認証フローを確認できる状態にしています。
+          ログインすると、加工した証明写真の履歴が保存され、AI
+          スーツ着せ替えなどの有料機能をご利用いただけます。
         </p>
 
-        <div className="mt-8 rounded-3xl border border-white/10 bg-white/5 p-5">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">
-            Day4 で確認できること
-          </p>
-          <ul className="mt-4 space-y-3 text-sm leading-7 text-slate-200">
-            <li>メールのログインリンク送信</li>
-            <li>Google OAuth 開始導線</li>
-            <li>認証状態の保持とサインアウト</li>
-            <li>未設定時のエラー表示</li>
-          </ul>
-        </div>
+        <ul className="mt-8 space-y-3 text-sm leading-7 text-slate-200">
+          <li className="flex items-start gap-2">
+            <span className="mt-0.5 text-sky-300">✓</span>
+            加工履歴の保存
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="mt-0.5 text-sky-300">✓</span>
+            AI スーツ着せ替え（300円 / 回）
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="mt-0.5 text-sky-300">✓</span>
+            透かしなし高解像度ダウンロード
+          </li>
+        </ul>
 
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
@@ -191,12 +194,12 @@ export function AuthScreen() {
           >
             LPに戻る
           </Link>
-          <a
-            href="https://supabase.com/dashboard"
+          <Link
+            href="/shoot"
             className="rounded-full border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/8"
           >
-            Supabase を開く
-          </a>
+            ログインせずに試す
+          </Link>
         </div>
       </section>
 
@@ -256,16 +259,24 @@ export function AuthScreen() {
               {user.email ?? "メールアドレス不明"}
             </p>
             <p className="mt-2 text-sm leading-7 text-emerald-800">
-              利用画面そのものはまだ未実装です。Day6 以降の撮影・アップロード画面はここに接続します。
+              証明写真の作成や AI スーツ着せ替えをご利用いただけます。
             </p>
-            <button
-              type="button"
-              onClick={handleSignOut}
-              disabled={isPending}
-              className="mt-5 rounded-full bg-emerald-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              サインアウト
-            </button>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Link
+                href="/shoot"
+                className="rounded-full bg-emerald-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
+              >
+                証明写真を作る →
+              </Link>
+              <button
+                type="button"
+                onClick={handleSignOut}
+                disabled={isPending}
+                className="rounded-full border border-emerald-300 px-5 py-3 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                サインアウト
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -321,10 +332,6 @@ export function AuthScreen() {
             </button>
           </>
         )}
-
-        <div className="mt-6 rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-7 text-slate-500">
-          OAuth 側の外部設定はまだ未投入前提です。`day4_auth_setup.md` の手順を入れると、この画面の導線がそのまま有効になります。
-        </div>
 
         {feedback.kind !== "idle" ? (
           <div
