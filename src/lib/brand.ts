@@ -1,5 +1,6 @@
 export const serviceName = "スマ撮り証明写真";
 export const publicAppUrl = "https://app-six-ochre-65.vercel.app";
+export const supportEmail = "project.hiroto172516@gmail.com";
 
 export const serviceTagline = "スマホで撮って、AIが証明写真に仕上げます";
 

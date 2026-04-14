@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { publicAppUrl } from "@/lib/brand";
 
-const lastModified = new Date("2026-03-17T00:00:00+09:00");
+const lastModified = new Date("2026-04-14T00:00:00+09:00");
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
@@ -40,6 +40,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified,
       changeFrequency: "monthly",
       priority: 0.3,
+    },
+    {
+      url: `${publicAppUrl}/support`,
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.5,
     },
   ];
 }

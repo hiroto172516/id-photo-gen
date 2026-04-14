@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LegalLinks } from '@/components/LegalLinks';
-import { publicAppUrl, serviceName, socialHandles } from '@/lib/brand';
+import { publicAppUrl, serviceName, supportEmail } from '@/lib/brand';
 
 export const metadata: Metadata = {
   title: `利用規約 | ${serviceName}`,
@@ -142,16 +142,15 @@ export default function TermsPage() {
           <section className="rounded-3xl border border-blue-100 bg-blue-50 p-6">
             <h2 className="text-xl font-bold text-zinc-900">お問い合わせ</h2>
             <p className="mt-4 text-sm leading-7 text-zinc-600">
-              本規約や本サービスに関する問い合わせは、X アカウント{' '}
-              <a
-                href={`https://x.com/${socialHandles.x.replace('@', '')}`}
-                target="_blank"
-                rel="noreferrer"
-                className="font-semibold text-blue-600 underline underline-offset-2"
-              >
-                {socialHandles.x}
-              </a>{' '}
-              宛の DM で受け付けます。
+              本規約や本サービスに関する問い合わせは、
+              <Link href="/support" className="font-semibold text-blue-600 underline underline-offset-2">
+                お問い合わせフォーム
+              </Link>
+              または
+              <a href={`mailto:${supportEmail}`} className="font-semibold text-blue-600 underline underline-offset-2">
+                {supportEmail}
+              </a>
+              で受け付けます。
             </p>
           </section>
         </div>

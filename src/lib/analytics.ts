@@ -14,6 +14,7 @@ declare global {
 }
 
 export type AnalyticsEventName =
+  | "lp_cta_clicked"
   | "shoot_started"
   | "photo_processed"
   | "feedback_submitted"
@@ -27,7 +28,11 @@ export type AnalyticsEventName =
   | "suit_generation_applied"
   | "payment_initiated"
   | "payment_completed"
-  | "payment_required";
+  | "payment_required"
+  | "payment_cancelled"
+  | "payment_error_viewed"
+  | "support_submitted"
+  | "refund_requested";
 
 export type AnalyticsEventParams = Record<string, string | number | boolean | undefined>;
 

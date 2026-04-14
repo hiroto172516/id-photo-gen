@@ -98,6 +98,11 @@ export default function ShootPage() {
   const [isPremiumLocked, setIsPremiumLocked] = useState(true);
   const [premiumExpiresAt, setPremiumExpiresAt] = useState<string | null>(null);
   const [selectedImageTier, setSelectedImageTier] = useState<PreviewTier>('free');
+  const [paymentNotice, setPaymentNotice] = useState<
+    | { kind: 'cancelled'; sessionId?: string }
+    | { kind: 'error'; sessionId?: string }
+    | null
+  >(null);
   const editorRenderSequenceRef = useRef(0);
   const layoutRenderSequenceRef = useRef(0);
   const selectedSpec = getPhotoSpecPreset(selectedSpecId);
@@ -125,12 +130,17 @@ export default function ShootPage() {
       if (data.hasAccess) {
         setIsPremiumLocked(false);
         setPremiumExpiresAt(data.expiresAt ?? null);
+        setPaymentNotice(null);
         trackEvent('payment_completed');
         return;
       }
 
       setIsPremiumLocked(true);
       setPremiumExpiresAt(null);
+      if (sessionId) {
+        setPaymentNotice({ kind: 'error', sessionId });
+        trackEvent('payment_error_viewed', { source: 'payment_status', session_id: sessionId });
+      }
     } catch {
       // ネットワークエラー時はロック状態を維持
     }
@@ -148,6 +158,10 @@ export default function ShootPage() {
       if (params.get('payment') === 'success') {
         const sessionId = params.get('session_id') ?? undefined;
         void checkPaymentStatus(sessionId);
+      } else if (params.get('payment') === 'cancelled') {
+        const sessionId = params.get('session_id') ?? undefined;
+        setPaymentNotice({ kind: 'cancelled', sessionId: sessionId ?? undefined });
+        trackEvent('payment_cancelled', { source: 'stripe_checkout' });
       }
     }
   }, [checkPaymentStatus]);
@@ -845,6 +859,52 @@ export default function ShootPage() {
           </Link>
           すると処理履歴を保存できます。
         </div>
+
+        {paymentNotice ? (
+          <div
+            data-testid={paymentNotice.kind === 'cancelled' ? 'payment-cancelled-banner' : 'payment-error-banner'}
+            className={`mb-6 rounded-xl border px-4 py-3 text-sm ${
+              paymentNotice.kind === 'cancelled'
+                ? 'border-zinc-200 bg-zinc-50 text-zinc-700'
+                : 'border-rose-200 bg-rose-50 text-rose-700'
+            }`}
+          >
+            <p className="font-semibold">
+              {paymentNotice.kind === 'cancelled'
+                ? '決済は中断されました。'
+                : '決済済みの可能性がありますが、まだ機能解放を確認できていません。'}
+            </p>
+            <p className="mt-1 leading-6">
+              {paymentNotice.kind === 'cancelled'
+                ? '再度購入するか、決済トラブルがある場合はお問い合わせフォームからご連絡ください。'
+                : '数分待っても解放されない場合は、セッションID付きでお問い合わせください。'}
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Link
+                href={
+                  paymentNotice.sessionId
+                    ? `/support?category=payment_error&from=shoot&session_id=${encodeURIComponent(paymentNotice.sessionId)}`
+                    : '/support?category=payment_error&from=shoot'
+                }
+                className="rounded-lg border border-current/20 bg-white px-3 py-2 text-xs font-semibold"
+              >
+                問い合わせる
+              </Link>
+              {paymentNotice.kind === 'cancelled' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentNotice(null);
+                    void handlePaymentRequired();
+                  }}
+                  className="rounded-lg bg-zinc-900 px-3 py-2 text-xs font-semibold text-white"
+                >
+                  決済をやり直す
+                </button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
 
         <h1 className="mb-6 text-2xl font-bold tracking-tight">写真を用意する</h1>
 

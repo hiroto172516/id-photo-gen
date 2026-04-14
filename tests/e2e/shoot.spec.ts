@@ -89,7 +89,7 @@ async function prepareClientEnvironment(page: Page) {
 }
 
 async function mockStripeStatus(page: Page, options?: { hasAccess?: boolean; expiresAt?: string | null }) {
-  await page.route('**/api/stripe/status', async (route) => {
+  await page.route('**/api/stripe/status*', async (route) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
@@ -114,6 +114,19 @@ async function mockFeedbackSuccess(page: Page) {
       body: JSON.stringify({
         ok: true,
         message: 'フィードバックありがとうございます。改善の参考にします。',
+      }),
+    });
+  });
+}
+
+async function mockSupportSuccess(page: Page) {
+  await page.route('**/api/support', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
+        message: 'お問い合わせを受け付けました。内容を確認のうえ、必要に応じてメールでご連絡します。',
       }),
     });
   });
@@ -282,6 +295,36 @@ test.describe('shoot page', () => {
 
     await expect(page.getByTestId('feedback-error')).toContainText('入力内容を確認してください');
     await expect(page.getByText('感想は10文字以上で入力してください。')).toBeVisible();
+  });
+
+  test('サポートフォームを送信できる', async ({ page }) => {
+    await mockSupportSuccess(page);
+    await page.goto('/support?category=payment_error&from=shoot&session_id=cs_test_999');
+
+    await expect(page.getByRole('heading', { name: 'お問い合わせ' })).toBeVisible();
+    await expect(page.getByTestId('support-category')).toHaveValue('payment_error');
+    await expect(page.getByTestId('support-page-path')).toHaveValue('/shoot');
+    await expect(page.getByTestId('support-session-id')).toHaveValue('cs_test_999');
+
+    await page.getByTestId('support-email').fill('user@example.com');
+    await page.getByTestId('support-message').fill('決済は完了したはずですが、AIスーツ着せ替えが解放されません。確認をお願いします。');
+    await page.getByTestId('support-submit').click();
+
+    await expect(page.getByTestId('support-success')).toContainText('お問い合わせを受け付けました');
+    await expect
+      .poll(async () => page.evaluate(() => window.__trackedEvents?.map((event) => event.name) ?? []))
+      .toEqual(expect.arrayContaining(['support_submitted']));
+  });
+
+  test('サポートフォームの入力不足はエラーを表示する', async ({ page }) => {
+    await page.goto('/support?category=refund_request');
+
+    await page.getByTestId('support-email').fill('user@example.com');
+    await page.getByTestId('support-message').fill('短い内容です');
+    await page.getByTestId('support-submit').click();
+
+    await expect(page.getByTestId('support-error')).toContainText('入力内容を確認してください');
+    await expect(page.getByText('問い合わせ内容は20文字以上で入力してください。')).toBeVisible();
   });
 
   test('サイズ超過ファイルはバリデーションエラーを出す', async ({ page }) => {
@@ -582,7 +625,7 @@ test.describe('shoot page', () => {
         token_type: 'bearer',
       };
     });
-    await page.route('**/api/stripe/status', async (route) => {
+    await page.route('**/api/stripe/status*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -612,8 +655,47 @@ test.describe('shoot page', () => {
     await page.getByTestId('suit-payment-button').click();
 
     await expect(page).toHaveURL(/payment=success/);
+    await expect(page.getByTestId('suit-generation-panel')).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId('suit-premium-overlay')).toHaveCount(0);
     await expect(page.getByTestId('suit-premium-ready')).toBeVisible();
+  });
+
+  test('決済を中断した場合はサポート導線を表示する', async ({ page }) => {
+    await mockStripeStatus(page);
+    await page.goto('/shoot?payment=cancelled&session_id=cs_test_cancelled');
+    await expect(page.getByTestId('payment-cancelled-banner')).toBeVisible();
+    await expect(page.getByTestId('payment-cancelled-banner')).toContainText('決済は中断されました');
+
+    await page.getByRole('link', { name: '問い合わせる' }).click();
+    await expect(page).toHaveURL(/\/support\?category=payment_error/);
+    await expect(page.getByTestId('support-session-id')).toHaveValue('cs_test_cancelled');
+  });
+
+  test('決済未反映時はエラー導線を表示する', async ({ page }) => {
+    await page.addInitScript(() => {
+      window.__mockSupabaseSession = {
+        access_token: 'test-access-token',
+        token_type: 'bearer',
+      };
+    });
+
+    await page.route('**/api/stripe/status*', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          hasAccess: false,
+          expiresAt: null,
+        }),
+      });
+    });
+
+    await page.goto('/shoot?payment=success&session_id=cs_test_unresolved');
+    await expect(page.getByTestId('payment-error-banner')).toBeVisible();
+    await expect(page.getByTestId('payment-error-banner')).toContainText('まだ機能解放を確認できていません');
+    await expect
+      .poll(async () => page.evaluate(() => window.__trackedEvents?.map((event) => event.name) ?? []))
+      .toEqual(expect.arrayContaining(['payment_error_viewed']));
   });
 
   test('スーツ生成の成功フロー', async ({ page }) => {
@@ -715,7 +797,7 @@ test.describe('shoot page', () => {
 
     // Stripe ステータス: 決済前は未購入、checkout 呼び出し後に購入済みへ切り替え
     let hasAccess = false;
-    await page.route('**/api/stripe/status', async (route) => {
+    await page.route('**/api/stripe/status*', async (route) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -775,6 +857,7 @@ test.describe('shoot page', () => {
     await expect(page).toHaveURL(/payment=success/);
 
     // ロックが解除され、決済済み表示になることを確認
+    await expect(page.getByTestId('suit-generation-panel')).toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId('suit-premium-overlay')).toHaveCount(0);
     await expect(page.getByTestId('suit-premium-ready')).toBeVisible();
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { LegalLinks } from "@/components/LegalLinks";
+import { TrackedLink } from "@/components/TrackedLink";
 import { WaitlistForm } from "@/components/WaitlistForm";
 import { serviceName } from "../lib/brand";
 
@@ -234,12 +235,14 @@ export default function Home() {
             >
               公開予定
             </a>
-            <Link
+            <TrackedLink
               href="/shoot"
+              eventName="lp_cta_clicked"
+              eventParams={{ location: "header_nav", target: "/shoot" }}
               className="hidden rounded-lg px-3 py-2 text-zinc-500 transition-colors hover:bg-zinc-50 hover:text-zinc-900 sm:inline-block"
             >
               試してみる（β）
-            </Link>
+            </TrackedLink>
             <a
               href="#waitlist"
               className="ml-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-all hover:shadow-lg hover:shadow-blue-500/30 active:scale-[0.98]"
@@ -292,8 +295,10 @@ export default function Home() {
           </p>
 
           <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:justify-center sm:gap-4">
-            <Link
+            <TrackedLink
               href="/shoot"
+              eventName="lp_cta_clicked"
+              eventParams={{ location: "hero_primary", target: "/shoot" }}
               className="group relative inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-blue-500/30 transition-all hover:shadow-xl hover:shadow-blue-500/40 active:scale-[0.98]"
             >
               無料β版を試す
@@ -310,7 +315,7 @@ export default function Home() {
                   d="M13 7l5 5m0 0l-5 5m5-5H6"
                 />
               </svg>
-            </Link>
+            </TrackedLink>
             <a
               href="#how-it-works"
               className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-7 py-3.5 text-base font-medium text-zinc-700 transition-all hover:border-zinc-300 hover:bg-zinc-50 active:scale-[0.98]"
@@ -508,12 +513,14 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-              <a
+              <TrackedLink
                 href="/shoot"
+                eventName="lp_cta_clicked"
+                eventParams={{ location: "pricing_premium", target: "/shoot" }}
                 className="mt-8 block rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 py-3 text-center text-sm font-semibold text-white shadow-md shadow-blue-500/25 transition-all hover:shadow-lg hover:shadow-blue-500/35"
               >
                 今すぐ使う
-              </a>
+              </TrackedLink>
             </div>
           </div>
         </div>

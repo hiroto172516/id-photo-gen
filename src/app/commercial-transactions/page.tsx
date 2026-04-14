@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { LegalLinks } from '@/components/LegalLinks';
-import { publicAppUrl, serviceName } from '@/lib/brand';
+import { publicAppUrl, serviceName, supportEmail } from '@/lib/brand';
 
 export const metadata: Metadata = {
   title: `特定商取引法に基づく表記 | ${serviceName}`,
@@ -21,14 +21,14 @@ const sections = [
   { label: '運営責任者名', value: '小堀裕斗' },
   { label: '所在地', value: '東京都府中市分梅町1-5-2-1-201' },
   { label: '電話番号', value: '080-4096-6615' },
-  { label: '問い合わせ先メールアドレス', value: 'project.hiroto172516@gmail.com' },
+  { label: '問い合わせ先メールアドレス', value: supportEmail },
   { label: '問い合わせ受付時間', value: '平日9:00〜21:00' },
   { label: '販売価格', value: 'AIスーツ着せ替え 1回300円（税込）' },
   { label: '販売価格以外に必要な費用', value: '通信料のみ' },
   { label: '支払方法', value: 'クレジットカード（Stripe）' },
   { label: '支払時期', value: '購入時に即時決済' },
   { label: '提供時期', value: '決済完了後すぐに利用可能' },
-  { label: '返品・キャンセル条件', value: 'お客様都合による返品は不可' },
+  { label: '返品・キャンセル条件', value: 'お客様都合による返品は不可。サービス不備時は個別確認のうえ返金対応' },
   { label: '動作環境', value: '最新の Chrome / Safari 推奨' },
 ];
 
