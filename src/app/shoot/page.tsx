@@ -107,15 +107,18 @@ export default function ShootPage() {
   );
   const router = useRouter();
 
-  // 決済状況チェック
-  const checkPaymentStatus = useCallback(async () => {
+  // 決済状況チェック（session_id を渡すと Webhook 未着時のフォールバック検証も行う）
+  const checkPaymentStatus = useCallback(async (sessionId?: string) => {
     const supabase = getSupabaseBrowserClient();
     if (!supabase) return;
     const { data: { session } } = await supabase.auth.getSession();
     if (!session) return;
 
     try {
-      const res = await fetch('/api/stripe/status', {
+      const url = sessionId
+        ? `/api/stripe/status?session_id=${encodeURIComponent(sessionId)}`
+        : '/api/stripe/status';
+      const res = await fetch(url, {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       const data = (await res.json()) as { hasAccess: boolean; expiresAt: string | null };
@@ -138,12 +141,13 @@ export default function ShootPage() {
     void checkPaymentStatus();
   }, [checkPaymentStatus]);
 
-  // Stripe リダイレクト後（?payment=success）に再確認
+  // Stripe リダイレクト後（?payment=success）に session_id 付きで再確認
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       if (params.get('payment') === 'success') {
-        void checkPaymentStatus();
+        const sessionId = params.get('session_id') ?? undefined;
+        void checkPaymentStatus(sessionId);
       }
     }
   }, [checkPaymentStatus]);
